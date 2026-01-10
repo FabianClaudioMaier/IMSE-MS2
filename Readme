@@ -6,3 +6,9 @@ Univesity of Vienna WS 25
 Authors:
 Fabian Maier
 David Sauhammel
+
+
+Run app:
+
+# docker compose build
+# docker compose up
