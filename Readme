@@ -8,7 +8,7 @@ Fabian Maier
 David Sauhammel
 
 
-Run app:
+Run app by running these commands:
 
 # docker compose build
 # docker compose up
