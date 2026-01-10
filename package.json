@@ -1,4 +1,11 @@
 {
-  "name": "IMSE-MS2",
-  "version": "1.0.0"
+  "name": "imse-ms2-web",
+  "version": "1.0.0",
+  "description": "Dummy web app for IMSE-MS2",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "license": "MIT"
 }
+

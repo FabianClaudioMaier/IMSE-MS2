@@ -1,0 +1,6 @@
+services:
+  web:
+    build: .
+    image: imse-ms2-web
+    ports:
+      - "8080:3000"
