@@ -15,5 +15,5 @@ Run app by running these commands:
 
 Web UI: http://localhost:8080
 
-MariaDB is initialized from `../Milestone1/Create_Tables.sql` on first start.
+MariaDB is initialized from `./seed/Create_Tables.sql` on first start.
 To reset to an empty database, run: `docker compose down -v`

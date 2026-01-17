@@ -15,13 +15,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app/IMSE-MS2
 
 # 5) Copy only package files first (better layer caching)
-COPY IMSE-MS2/package*.json ./
+COPY package*.json ./
 
 # 6) Install dependencies
 RUN npm install
 
 # 7) Now copy the rest of the app
-COPY IMSE-MS2/. .
+COPY . .
 
 # 8) Expose ports
 EXPOSE 3000
