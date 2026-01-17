@@ -8,21 +8,20 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
-    build-essential \
     npm \
     && rm -rf /var/lib/apt/lists/*
 
 # 4) Create a working directory inside the image
-WORKDIR /IMSE-MS2
+WORKDIR /app/IMSE-MS2
 
 # 5) Copy only package files first (better layer caching)
-COPY package*.json ./
+COPY IMSE-MS2/package*.json ./
 
 # 6) Install dependencies
 RUN npm install
 
 # 7) Now copy the rest of the app
-COPY . .
+COPY IMSE-MS2/. .
 
 # 8) Expose ports
 EXPOSE 3000

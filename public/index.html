@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IMSE Data Console</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="tag">IMSE-MS2</p>
+          <h1>Fleet Data Console</h1>
+          <p class="subtitle">
+            Browse tables created in Milestone1/Create_Tables.sql
+          </p>
+        </div>
+        <div class="hero-card">
+          <div class="metric">
+            <span class="metric-label">Tables</span>
+            <span id="table-count" class="metric-value">-</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Rows</span>
+            <span id="row-count" class="metric-value">-</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="panel">
+          <h2>Tables</h2>
+          <div id="table-buttons" class="button-grid"></div>
+
+          <div class="controls">
+            <label for="limit">Row limit</label>
+            <input id="limit" type="number" min="1" max="500" value="50">
+
+            <label for="search">Filter</label>
+            <input id="search" type="text" placeholder="Type to filter rows">
+
+            <button id="refresh" class="accent" type="button">Refresh</button>
+            <button id="generate" class="generate" type="button">Generate Data</button>
+            <p id="generate-hint" class="hint">
+              One-time action. Inserts up to 10 rows per table.
+            </p>
+          </div>
+
+          <p id="status" class="status">Select a table to load data.</p>
+        </section>
+
+        <section class="panel wide">
+          <div class="table-header">
+            <h2 id="table-title">No table loaded</h2>
+            <p id="table-meta">Pick a table to see its rows.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table id="data-table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

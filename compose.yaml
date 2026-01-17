@@ -1,6 +1,30 @@
 services:
   web:
-    build: .
+    build:
+      context: ..
+      dockerfile: IMSE-MS2/Dockerfile
     image: imse-ms2-web
     ports:
       - "8080:3000"
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_USER: imse
+      DB_PASSWORD: imse
+      DB_NAME: imse
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: imse
+      MARIADB_USER: imse
+      MARIADB_PASSWORD: imse
+    volumes:
+      - ../Milestone1/Create_Tables.sql:/docker-entrypoint-initdb.d/01_create_tables.sql:ro
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
