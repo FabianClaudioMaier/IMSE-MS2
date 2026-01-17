@@ -7,60 +7,175 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <div class="page">
-      <header class="hero">
-        <div>
-          <p class="tag">IMSE-MS2</p>
-          <h1>Fleet Data Console</h1>
-          <p class="subtitle">
-            Browse tables created in Milestone1/Create_Tables.sql
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">IMSE</span>
+          <span class="brand-sub">MS2</span>
+        </div>
+        <nav class="nav">
+          <button class="nav-button active" data-view="home" type="button">Home</button>
+          <button class="nav-button" data-view="usecase2" type="button">Use Case Student 2</button>
+          <button class="nav-button" data-view="explore" type="button">Explore Data</button>
+        </nav>
+        <div class="sidebar-footer">
+          <p>Vehicle booking system UI</p>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section id="view-home" class="view active">
+          <header class="hero">
+            <div>
+              <p class="tag">IMSE-MS2</p>
+              <h1>Use Case Hub</h1>
+              <p class="subtitle">
+                Choose the scenario you want to demonstrate.
+              </p>
+            </div>
+            <div class="hero-card">
+              <div class="metric">
+                <span class="metric-label">Use Cases</span>
+                <span class="metric-value">2</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Mode</span>
+                <span class="metric-value">Demo</span>
+              </div>
+            </div>
+          </header>
+
+          <div class="home-actions">
+            <button id="home-uc1" class="card-button" type="button">
+              Use Case Student 1
+            </button>
+            <button id="home-uc2" class="card-button accent" type="button">
+              Use Case Student 2
+            </button>
+          </div>
+
+          <p id="home-note" class="status">
+            Use Case Student 1 is not implemented yet.
           </p>
-        </div>
-        <div class="hero-card">
-          <div class="metric">
-            <span class="metric-label">Tables</span>
-            <span id="table-count" class="metric-value">-</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Rows</span>
-            <span id="row-count" class="metric-value">-</span>
-          </div>
-        </div>
-      </header>
-
-      <main class="grid">
-        <section class="panel">
-          <h2>Tables</h2>
-          <div id="table-buttons" class="button-grid"></div>
-
-          <div class="controls">
-            <label for="limit">Row limit</label>
-            <input id="limit" type="number" min="1" max="500" value="50">
-
-            <label for="search">Filter</label>
-            <input id="search" type="text" placeholder="Type to filter rows">
-
-            <button id="refresh" class="accent" type="button">Refresh</button>
-            <button id="generate" class="generate" type="button">Generate Data</button>
-            <p id="generate-hint" class="hint">
-              One-time action. Inserts up to 10 rows per table.
-            </p>
-          </div>
-
-          <p id="status" class="status">Select a table to load data.</p>
         </section>
 
-        <section class="panel wide">
-          <div class="table-header">
-            <h2 id="table-title">No table loaded</h2>
-            <p id="table-meta">Pick a table to see its rows.</p>
-          </div>
+        <section id="view-usecase2" class="view">
+          <header class="view-header">
+            <div>
+              <p class="tag">Use Case Student 2</p>
+              <h2>Book Additional Services</h2>
+              <p class="subtitle">
+                Select a customer, pick an active booking, add extra services, and confirm payment.
+              </p>
+            </div>
+          </header>
 
-          <div class="table-wrap">
-            <table id="data-table">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
+          <div class="usecase-grid">
+            <section class="panel">
+              <h3>1. Select customer</h3>
+              <label for="uc-customer">Customer</label>
+              <select id="uc-customer"></select>
+              <div id="uc-customer-details" class="info-card"></div>
+            </section>
+
+            <section class="panel">
+              <h3>2. Select booking</h3>
+              <div id="uc-booking-list" class="card-list"></div>
+              <p id="uc-booking-status" class="status">
+                Select a customer to load bookings.
+              </p>
+            </section>
+
+            <section class="panel">
+              <h3>3. Choose additional services</h3>
+              <div class="split">
+                <div>
+                  <h4>Already booked</h4>
+                  <div id="uc-current-services" class="chip-list"></div>
+                </div>
+                <div>
+                  <h4>Available</h4>
+                  <div id="uc-service-list" class="service-list"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <h3>4. Confirm</h3>
+              <div id="uc-summary" class="summary"></div>
+              <button id="uc-confirm-services" class="accent" type="button">
+                Confirm booking of additional services
+              </button>
+              <div id="uc-payment-panel" class="payment hidden">
+                <p>Confirm payment for the selected services.</p>
+                <div class="payment-actions">
+                  <button id="uc-confirm-payment" class="accent" type="button">
+                    Confirm payment
+                  </button>
+                  <button id="uc-cancel-payment" type="button">Cancel</button>
+                </div>
+              </div>
+              <p id="uc-status" class="status">Follow the steps to add services.</p>
+            </section>
+          </div>
+        </section>
+
+        <section id="view-explore" class="view">
+          <header class="view-header">
+            <div>
+              <p class="tag">Explore Data</p>
+              <h2>Fleet Data Console</h2>
+              <p class="subtitle">
+                Browse tables created in Milestone1/Create_Tables.sql
+              </p>
+            </div>
+            <div class="hero-card">
+              <div class="metric">
+                <span class="metric-label">Tables</span>
+                <span id="table-count" class="metric-value">-</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Rows</span>
+                <span id="row-count" class="metric-value">-</span>
+              </div>
+            </div>
+          </header>
+
+          <div class="explore-grid">
+            <section class="panel">
+              <h2>Tables</h2>
+              <div id="table-buttons" class="button-grid"></div>
+
+              <div class="controls">
+                <label for="limit">Row limit</label>
+                <input id="limit" type="number" min="1" max="500" value="50">
+
+                <label for="search">Filter</label>
+                <input id="search" type="text" placeholder="Type to filter rows">
+
+                <button id="refresh" class="accent" type="button">Refresh</button>
+                <button id="generate" class="generate" type="button">Generate Data</button>
+                <p id="generate-hint" class="hint">
+                  One-time action. Inserts up to 10 rows per table.
+                </p>
+              </div>
+
+              <p id="status" class="status">Select a table to load data.</p>
+            </section>
+
+            <section class="panel wide">
+              <div class="table-header">
+                <h2 id="table-title">No table loaded</h2>
+                <p id="table-meta">Pick a table to see its rows.</p>
+              </div>
+
+              <div class="table-wrap">
+                <table id="data-table">
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </section>
           </div>
         </section>
       </main>
