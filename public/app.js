@@ -1,6 +1,7 @@
 const viewButtons = document.querySelectorAll("[data-view]");
 const views = {
   home: document.getElementById("view-home"),
+  usecase1: document.getElementById("view-usecase1"),
   usecase2: document.getElementById("view-usecase2"),
   explore: document.getElementById("view-explore"),
 };
@@ -20,6 +21,9 @@ function setView(viewName) {
   if (viewName === "usecase2" && ucCustomers.length === 0) {
     loadUseCaseCustomers();
   }
+  if (viewName === "usecase1" && uc1Customers.length === 0) {
+    loadUc1Customers();
+  }
 }
 
 viewButtons.forEach((button) => {
@@ -34,9 +38,7 @@ const homeNote = document.getElementById("home-note");
 
 if (homeUc1Button) {
   homeUc1Button.addEventListener("click", () => {
-    if (homeNote) {
-      homeNote.textContent = "Use Case Student 1 is not implemented yet.";
-    }
+    setView("usecase1");
   });
 }
 
@@ -333,6 +335,215 @@ if (searchInput) {
     applyFilter();
   });
 }
+
+
+
+// -----------------------------
+// Use case Student 1 flow
+// -----------------------------
+const uc1CustomerSelect = document.getElementById("uc1-customer");
+const uc1CustomerDetails = document.getElementById("uc1-customer-details");
+const uc1StartDate = document.getElementById("uc1-start-date");
+const uc1EndDate = document.getElementById("uc1-end-date");
+const uc1CheckVehicles = document.getElementById("uc1-check-vehicles");
+const uc1VehicleList = document.getElementById("uc1-vehicle-list");
+const uc1VehicleStatus = document.getElementById("uc1-vehicle-status");
+const uc1Summary = document.getElementById("uc1-summary");
+const uc1ConfirmBooking = document.getElementById("uc1-confirm-booking");
+const uc1PaymentPanel = document.getElementById("uc1-payment-panel");
+const uc1ConfirmPayment = document.getElementById("uc1-confirm-payment");
+const uc1CancelPayment = document.getElementById("uc1-cancel-payment");
+const uc1Status = document.getElementById("uc1-status");
+
+let uc1Customers = [];
+let uc1SelectedCustomer = null;
+let uc1Vehicles = [];
+let uc1SelectedVehicle = null;
+
+
+function setUc1Status(message, isError = false) {
+  if (!uc1Status) return;
+  uc1Status.textContent = message;
+  uc1Status.classList.toggle("error", isError);
+}
+
+async function loadUc1Customers() {
+  if (!uc1CustomerSelect) return;
+  try {
+    const res = await fetch("/api/usecase1/customers");
+    const data = await res.json();
+    uc1Customers = data.customers || [];
+    uc1CustomerSelect.innerHTML = "<option value=''>Select a customer</option>";
+    uc1Customers.forEach((c) => {
+      const opt = document.createElement("option");
+      opt.value = c.person_id;
+      opt.textContent = `${c.name} (${c.customer_number})`;
+      uc1CustomerSelect.appendChild(opt);
+    });
+  } catch {
+    setUc1Status("Failed to load customers.", true);
+  }
+}
+
+function renderUc1CustomerDetails() {
+  if (!uc1CustomerDetails) return;
+  if (!uc1SelectedCustomer) {
+    uc1CustomerDetails.textContent = "No customer selected.";
+    return;
+  }
+  uc1CustomerDetails.innerHTML = `
+    <div><strong>${uc1SelectedCustomer.name}</strong></div>
+    <div>Customer #: ${uc1SelectedCustomer.customer_number}</div>
+    <div>Driver license: ${uc1SelectedCustomer.driver_licencse_number}</div>
+    <div>IBAN: ${uc1SelectedCustomer.iban}</div>
+  `;
+}
+
+async function loadUc1Vehicles() {
+  if (!uc1StartDate?.value || !uc1EndDate?.value) {
+    setUc1Status("Select start and end date.", true);
+    return;
+  }
+  try {
+    const qs = new URLSearchParams({
+      start: uc1StartDate.value,
+      end: uc1EndDate.value,
+    });
+    const res = await fetch(`/api/usecase1/vehicles?${qs.toString()}`);
+    const data = await res.json();
+    uc1Vehicles = data.vehicles || [];
+    renderUc1VehicleList();
+  } catch {
+    setUc1Status("Failed to load vehicles.", true);
+  }
+}
+
+function renderUc1VehicleList() {
+  if (!uc1VehicleList) return;
+  uc1VehicleList.innerHTML = "";
+  if (uc1Vehicles.length === 0) {
+    uc1VehicleStatus.textContent = "No vehicles available.";
+    return;
+  }
+  uc1VehicleStatus.textContent = "Select a vehicle.";
+  uc1Vehicles.forEach((v) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "booking-card";
+    if (uc1SelectedVehicle?.vehicle_id === v.vehicle_id) {
+      card.classList.add("active");
+    }
+    card.innerHTML = `
+      <div><strong>${v.producer} ${v.model}</strong></div>
+      <div>Plate: ${v.plate_number}</div>
+      <div>Costs/day: ${formatMoney(v.costs_per_day)}</div>
+    `;
+    card.addEventListener("click", () => {
+      uc1SelectedVehicle = v;
+      renderUc1VehicleList();
+      renderUc1Summary();
+    });
+    uc1VehicleList.appendChild(card);
+  });
+}
+
+function renderUc1Summary() {
+  if (!uc1Summary) return;
+  const days =
+    uc1StartDate?.value && uc1EndDate?.value
+      ? Math.max(
+          (new Date(uc1EndDate.value) - new Date(uc1StartDate.value)) /
+            (1000 * 60 * 60 * 24),
+          1
+        )
+      : 0;
+  const base =
+    uc1SelectedVehicle ? days * Number(uc1SelectedVehicle.costs_per_day) : 0;
+
+  uc1Summary.innerHTML = `
+    <div class="summary-line"><span>Days</span><span>${days}</span></div>
+    <div class="summary-line"><span>Estimated base cost</span><span>${formatMoney(base)}</span></div>
+  `;
+
+  if (uc1ConfirmBooking) {
+    uc1ConfirmBooking.disabled = !uc1SelectedCustomer || !uc1SelectedVehicle;
+  }
+}
+
+async function confirmUc1Booking() {
+  if (!uc1SelectedCustomer || !uc1SelectedVehicle) {
+    setUc1Status("Select customer and vehicle first.", true);
+    return;
+  }
+  try {
+    const res = await fetch("/api/usecase1/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerId: uc1SelectedCustomer.person_id,
+        vehicleId: uc1SelectedVehicle.vehicle_id,
+        startDate: uc1StartDate.value,
+        endDate: uc1EndDate.value,
+        wayOfBilling: "CreditCard",
+        confirmPayment: true,
+      }),
+    });
+    if (!res.ok) throw new Error();
+    setUc1Status("Reservation created.");
+  } catch {
+    setUc1Status("Failed to create reservation.", true);
+  }
+}
+
+
+if (uc1CustomerSelect) {
+  uc1CustomerSelect.addEventListener("change", () => {
+    const selectedId = uc1CustomerSelect.value;
+    uc1SelectedCustomer =
+      uc1Customers.find((c) => c.person_id === selectedId) || null;
+    renderUc1CustomerDetails();
+  });
+}
+
+if (uc1CheckVehicles) {
+  uc1CheckVehicles.addEventListener("click", () => {
+    loadUc1Vehicles();
+  });
+}
+
+if (uc1ConfirmBooking) {
+  uc1ConfirmBooking.addEventListener("click", () => {
+    showUc1PaymentPanel();
+    setUc1Status("Confirm payment to finalize reservation.");
+  });
+}
+
+if (uc1ConfirmPayment) {
+  uc1ConfirmPayment.addEventListener("click", () => {
+    confirmUc1Booking();
+  });
+}
+
+if (uc1CancelPayment) {
+  uc1CancelPayment.addEventListener("click", () => {
+    hideUc1PaymentPanel();
+    setUc1Status("Payment canceled.");
+  });
+}
+
+function showUc1PaymentPanel() {
+  if (uc1PaymentPanel) {
+    uc1PaymentPanel.classList.remove("hidden");
+  }
+}
+
+function hideUc1PaymentPanel() {
+  if (uc1PaymentPanel) {
+    uc1PaymentPanel.classList.add("hidden");
+  }
+}
+
+
 
 // -----------------------------
 // Use case Student 2 flow
@@ -773,3 +984,4 @@ if (ucCancelPayment) {
 loadTables();
 loadSeedStatus();
 loadUseCaseCustomers();
+loadUc1Customers();

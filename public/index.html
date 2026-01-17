@@ -15,6 +15,7 @@
         </div>
         <nav class="nav">
           <button class="nav-button active" data-view="home" type="button">Home</button>
+          <button class="nav-button" data-view="usecase1" type="button" >Use Case Student 1</button>
           <button class="nav-button" data-view="usecase2" type="button">Use Case Student 2</button>
           <button class="nav-button" data-view="explore" type="button">Explore Data</button>
         </nav>
@@ -23,6 +24,7 @@
         </div>
       </aside>
 
+      
       <main class="content">
         <section id="view-home" class="view active">
           <header class="hero">
@@ -59,6 +61,96 @@
           </p>
         </section>
 
+
+
+
+
+
+
+        
+
+        <section id= "view-usecase1" class="view">
+          <header class="view-header">
+            <div>
+              <p class="tag">Use Case Student1</p>
+              <h2>Create a Vehicle Reservation</h2>
+              <p class= "subtitle"> Select customer, date, vehicle and confirm</p>
+
+            </div>
+
+          </header>
+
+          <div class="usecase-grid">
+
+              <section class="panel">
+                <h3>1. Select customer</h3>
+                <label for="uc1-customer">Customer</label>
+                <select id="uc1-customer"></select>
+                <div id="uc1-customer-details" class="info-card"></div>
+              </section>
+  
+              <section class="panel">
+                <h3>2. Select dates</h3>
+                <label for="uc1-start-date"> Start date</label>
+                <input id="uc1-start-date" type="date">
+                <label for="uc1-end-date"> End date</label>
+                <input id="uc1-end-date" type="date">
+
+                <button id="uc1-check-vehicles" class="accent" type="button"> Check available Cars</button>
+                <p id="uc1-date-status" class="status">
+                  Select a date to load vehicles
+                </p>
+              </section>
+  
+              <section class="panel">
+                <h3>3. Choose vehicle</h3>
+                <div id="uc1-vehicle-list" class="card-list"></div>
+                <p id="uc1-vehicle-status" class="status">Select dates to see available vehicles.</p>
+              </section>
+  
+              <section class="panel">
+                <h3>4. Confirm reservation</h3>
+                <div id="uc1-summary" class="summary"></div>
+                <button id="uc1-confirm-booking" class="accent" type="button">Confirm reservation</button>
+                <div id="uc1-payment-panel" class="payment hidden">
+                  <p>Confirm payment for this reservation.</p>
+                  <div class="payment-actions">
+                    <button id="uc1-confirm-payment" class="accent" type="button">Confirm payment</button>
+                    <button id="uc1-cancel-payment" type="button">Cancel</button>
+                  </div>
+                </div>
+                <p id="uc1-status" class="status">Follow the steps to create a booking.</p>
+              </section>
+          </div>
+          
+
+          
+
+
+
+        </section>
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         <section id="view-usecase2" class="view">
           <header class="view-header">
             <div>
@@ -69,6 +161,7 @@
               </p>
             </div>
           </header>
+            
 
           <div class="usecase-grid">
             <section class="panel">

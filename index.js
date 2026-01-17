@@ -359,6 +359,68 @@ app.post("/api/usecase/bookings/:id/services", async (req, res) => {
   }
 });
 
+
+
+app.get("/api/usecase1/customers", async (req, res) => {
+  const [rows] = await pool.query(
+    `SELECT p.id AS person_id, p.name, c.customer_number, c.driver_licencse_number, b.iban
+     FROM Customer c
+     JOIN Person p ON p.id = c.person_id
+     JOIN Bankaccount b ON b.person_id = c.person_id
+     ORDER BY p.name`
+  );
+  res.json({ customers: rows });
+});
+
+app.get("/api/usecase1/vehicles", async (req, res) => {
+  const { start, end } = req.query;
+  if (!start || !end) return res.status(400).json({ error: "Missing dates" });
+
+  const [rows] = await pool.query(
+    `SELECT v.vehicle_id, v.model, v.producer, v.costs_per_day, v.plate_number
+     FROM Vehicle v
+     LEFT JOIN Booking b
+       ON v.vehicle_id = b.vehicle_id
+      AND b.start_date <= ? AND b.end_date >= ?
+     WHERE b.booking_id IS NULL
+     ORDER BY v.producer, v.model`,
+    [end, start]
+  );
+  res.json({ vehicles: rows });
+});
+
+app.post("/api/usecase1/bookings", async (req, res) => {
+  const { customerId, vehicleId, startDate, endDate, wayOfBilling } = req.body || {};
+  if (!customerId || !vehicleId || !startDate || !endDate || !wayOfBilling) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+
+  const [veh] = await pool.query(
+    "SELECT costs_per_day FROM Vehicle WHERE vehicle_id = ?",
+    [vehicleId]
+  );
+  if (veh.length === 0) return res.status(400).json({ error: "Invalid vehicle" });
+
+  const bookingId = `b_${Date.now()}`;
+  const days = Math.max(
+    Math.ceil((new Date(endDate) - new Date(startDate)) / 86400000),
+    1
+  );
+  const total = (Number(veh[0].costs_per_day) || 0) * days;
+
+  await pool.query(
+    `INSERT INTO Booking (booking_id, start_date, end_date, total_costs, way_of_billing, customer_id, vehicle_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [bookingId, startDate, endDate, total, wayOfBilling, customerId, vehicleId]
+  );
+
+  res.json({ ok: true, booking_id: bookingId, total_costs: total });
+});
+
+
+
+
+
 app.get("/api/table/:name", async (req, res) => {
   const table = req.params.name;
   if (!tableAllowlist.includes(table)) {
