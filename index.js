@@ -510,18 +510,21 @@ app.post("/api/usecase/bookings/:id/services", async (req, res) => {
 
 app.get("/api/usecase1/customers", async (req, res) => {
   try {
-    const [rows] = await pool.query(
+    const [result] = await pool.query(
       `SELECT p.id AS person_id, p.name, c.customer_number, c.driver_licencse_number, b.iban
        FROM Customer c
        JOIN Person p ON p.id = c.person_id
        JOIN Bankaccount b ON b.person_id = c.person_id
        ORDER BY p.name`
     );
-    res.json({ customers: rows });
+    res.json({ customers: result });
   } catch (err) {
-    res.status(500).json({ error: "Failed to load customers" });
+    res.status(500).json({error: "No chance to get customer data" });
   }
 });
+
+
+
 
 app.get("/api/usecase1/vehicles", async (req, res) => {
   const { start, end } = req.query;
@@ -544,6 +547,19 @@ app.get("/api/usecase1/vehicles", async (req, res) => {
   }
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+//useCase1report
 
 app.get("/api/usecase1/report", async (req, res) =>{
   try{
@@ -656,6 +672,21 @@ app.post("/api/usecase1/bookings", async (req, res) => {
 
   res.json({ ok: true, booking_id: bookingId, total_costs: total });
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 app.post("/api/migrate-nosql", async (req, res) => {
   try {

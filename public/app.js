@@ -363,7 +363,16 @@ if (searchInput) {
 
 
 
-// ===== Use Case 1 – very simple =====
+
+
+
+
+
+
+
+
+
+//  Use Case 1 
 
 let uc1CustomersLoaded = false;
 let uc1DefaultCustomerId = null;
@@ -377,7 +386,6 @@ const statusP = document.getElementById("uc1-status");
 const vehiclesDiv = document.getElementById("uc1-vehicles");
 const summaryDiv = document.getElementById("uc1-result");
 
-// kleine Hilfen
 function setUc1Status(text) {
   if (statusP) {
     statusP.textContent = text || "";
@@ -410,20 +418,37 @@ async function postJson(url, body) {
   return data;
 }
 
+
+//USECASE!
+
+
+
+
+//
+
+
 // 1) Customers laden
 async function loadUc1Customers() {
   try {
     setUc1Status("Loading customers...");
     const data = await getJson("/api/usecase1/customers");
 
-    uc1DefaultCustomerId = data.customers?.[0]?.person_id || null;
+    if(data.customers && data.customers.length>0){
+      uc1DefaultCustomerId= data.customers[0].person_id;
+    } else{
+      uc1DefaultCustomerId= null;
+    }
 
     if (customerSelect) {
+
+
       customerSelect.innerHTML = "";
-      for (const c of data.customers) {
+      for (const customer of data.customers) {
+
+
         const opt = document.createElement("option");
-        opt.value = c.person_id; // interne ID
-        opt.textContent = `${c.name} (Nr: ${c.customer_number})`;
+        opt.value = customer.person_id; // interne ID
+        opt.textContent = `${customer.name}`;
         customerSelect.appendChild(opt);
       }
     }
@@ -432,23 +457,60 @@ async function loadUc1Customers() {
       setUc1Status("No customers available. Generate data first.");
       return;
     }
+
+
     setUc1Status("");
     uc1CustomersLoaded = true;
   } catch (e) {
-    setUc1Status("Error: " + e.message);
+    setUc1Status("Error:" + e.message);
   }
 }
 
+
+
+
+
+
+
+
 // 2) Fahrzeuge suchen
-async function searchVehicles() {
+async function searchVehicles(options = {}) {
+
+
+  const { preserveStatus = false } = options;
+
+
   if (vehiclesDiv) {
     vehiclesDiv.innerHTML = "";
   }
-  setSummary("");
+  if (!preserveStatus) {
+    setSummary("");
+  }
 
-  const start = startInput ? startInput.value : "";
-  const end = endInput ? endInput.value : "";
-  const customerId = customerSelect?.value || uc1DefaultCustomerId;
+
+  let start, end, customerId;
+
+  if(startInput!=null){
+     start= startInput.value;
+  }
+  else{
+     start="";
+  }
+ 
+
+  if(endInput!=null){
+     end= endInput.value;
+  }
+  else{
+     end="";
+  }
+
+  if(customerSelect!=null){
+    customerId= customerSelect.value;
+  }
+  else{
+    customerId= uc1DefaultCustomerId;
+  }
 
   if (!customerId) {
     setUc1Status("No customers available. Generate data first.");
@@ -463,48 +525,72 @@ async function searchVehicles() {
     return;
   }
 
+
+
+
+
   try {
-    setUc1Status("Searching vehicles...");
+    if (!preserveStatus) {
+      setUc1Status("Searching vehicles...");
+    }
     const data = await getJson(
       `/api/usecase1/vehicles?start=${start}&end=${end}`
     );
 
-    setUc1Status("");
+    if (!preserveStatus) {
+      setUc1Status("");
+    }
 
     if (data.vehicles.length === 0) {
-      setUc1Status("No vehicles available.");
+      if (!preserveStatus) {
+        setUc1Status("No vehicles available.");
+      }
       return;
     }
 
-    // ganz einfache Liste
     for (const v of data.vehicles) {
       const row = document.createElement("div");
-      row.style.marginBottom = "6px";
 
-      row.textContent =
-        `${v.producer} ${v.model} | ${v.plate_number} | €${v.costs_per_day}/day`;
 
-      const btn = document.createElement("button");
-      btn.textContent = "Reserve";
-      btn.style.marginLeft = "10px";
-      btn.onclick = () => reserveVehicle(v.vehicle_id, start, end, customerId);
+      row.textContent = `${v.producer} ${v.model} | ${v.plate_number} | €${v.costs_per_day}/day`;
 
-      row.appendChild(btn);
-      if (vehiclesDiv) {
+      const but = document.createElement("button");
+      but.textContent = "Reserve";
+
+
+
+
+      but.onclick = () => reserveVehicle(v.vehicle_id, start, end, customerId);
+
+      row.appendChild(but);
+
+
+
+      if(vehiclesDiv!=null){
         vehiclesDiv.appendChild(row);
       }
+
+      
     }
   } catch (e) {
     setUc1Status("Error: " + e.message);
   }
 }
 
+
+
+
+
+
 // 3) Reservieren
 async function reserveVehicle(vehicleId, startDate, endDate, customerId) {
+
+
+
   try {
     setUc1Status("Creating reservation...");
 
-    const payload = {
+    const daten = {
       customerId: customerId,
       vehicleId: vehicleId,
       startDate: startDate,
@@ -512,25 +598,28 @@ async function reserveVehicle(vehicleId, startDate, endDate, customerId) {
       wayOfBilling: "BANK_TRANSFER",
     };
 
-    const data = await postJson("/api/usecase1/bookings", payload);
+    const data = await postJson("/api/usecase1/bookings", daten);
 
     setUc1Status("Reservation created!");
     setSummary(data);
 
-    // Liste neu laden (Fahrzeug verschwindet)
-    await searchVehicles();
+    await searchVehicles({ preserveStatus: true });
   } catch (e) {
     setUc1Status("Error: " + e.message);
   }
 }
 
-// Button verbinden
 if (searchBtn) {
   searchBtn.addEventListener("click", searchVehicles);
 }
 
-// Start
 loadUc1Customers();
+
+
+
+
+
+//-------------------------------------------------------------------
 
 
 
@@ -976,6 +1065,22 @@ loadUseCaseCustomers();
 loadUc1Customers();
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ===== Analytics Report (Use Case Student 1) =====
 
 const repFrom = document.getElementById("rep-from");
@@ -1048,13 +1153,21 @@ async function loadReport() {
     return;
   }
   try {
+
+
     setRepStatus("Loading report...");
     repOut.innerHTML = "";
 
     const params = new URLSearchParams();
-    if (repFrom.value) params.set("from", repFrom.value);
-    if (repTo.value) params.set("to", repTo.value);
-    if (repVehicle.value) params.set("vehicleId", repVehicle.value.trim());
+    if (repFrom.value) {
+      params.set("from", repFrom.value);
+    }
+    if (repTo.value) {
+      params.set("to", repTo.value);
+    }
+    if (repVehicle.value){ 
+      params.set("vehicleId", repVehicle.value.trim());
+    }
 
     const url =
       "/api/usecase1/report" +
