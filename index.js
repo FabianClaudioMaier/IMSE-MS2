@@ -2,6 +2,7 @@ const express = require("express");
 const fs = require("fs/promises");
 const path = require("path");
 const mysql = require("mysql2/promise");
+const {MongoClient}= require("mongodb");
 
 const port = process.env.PORT || 3000;
 const webport = process.env.WEB_PORT || 8080;
@@ -33,6 +34,11 @@ const dbConfig = {
   connectionLimit: 10,
   queueLimit: 0,
 };
+
+
+const mongoUrl = process.env.MONGO_URL || "mongodb://mongo:27017";
+const mongoDbName = process.env.MONGO_DB || "imse_nosql";
+
 
 const pool = mysql.createPool(dbConfig);
 
@@ -104,6 +110,141 @@ async function ensureBookingTotalCostsColumn() {
 function buildInClause(values) {
   return values.map(() => "?").join(", ");
 }
+
+//Mongo DB migration
+
+async function migrateToMongo() {
+  const client = new MongoClient(mongoUrl);
+  await client.connect();
+  const db = client.db(mongoDbName);
+
+  // 1) Clear collections
+  await Promise.all([
+    db.collection("persons").deleteMany({}),
+    db.collection("vehicles").deleteMany({}),
+    db.collection("services").deleteMany({}),
+    db.collection("bookings").deleteMany({}),
+    db.collection("ratings").deleteMany({}),
+  ]);
+
+  // 2) Load base tables
+  const [persons] = await pool.query(`
+    SELECT p.*, c.customer_number, c.driver_licencse_number,
+           r.company_name, r.tax_number,
+           b.account_id, b.iban, b.bic
+    FROM Person p
+    LEFT JOIN Customer c ON c.person_id = p.id
+    LEFT JOIN Retailer r ON r.person_id = p.id
+    LEFT JOIN Bankaccount b ON b.person_id = p.id
+  `);
+
+  const [vehicles] = await pool.query(`SELECT * FROM Vehicle`);
+  const [services] = await pool.query(`SELECT * FROM AdditionalService`);
+  const [ratings] = await pool.query(`SELECT * FROM Rating`);
+
+  // 3) Write base collections
+  if (persons.length) await db.collection("persons").insertMany(persons.map(p => ({
+    _id: p.id,
+    name: p.name,
+    phone_number: p.phone_number,
+    eMail: p.eMail,
+    address: p.address,
+    stars: p.stars,
+    roles: {
+      customer: p.customer_number ? {
+        customer_number: p.customer_number,
+        driver_licencse_number: p.driver_licencse_number,
+      } : null,
+      retailer: p.company_name ? {
+        company_name: p.company_name,
+        tax_number: p.tax_number,
+      } : null,
+    },
+    bankAccount: p.account_id ? {
+      account_id: p.account_id,
+      iban: p.iban,
+      bic: p.bic,
+    } : null,
+  })));
+
+  if (vehicles.length) await db.collection("vehicles").insertMany(vehicles.map(v => ({
+    _id: v.vehicle_id,
+    model: v.model,
+    producer: v.producer,
+    costs_per_day: v.costs_per_day,
+    plate_number: v.plate_number,
+    number_of_seats: v.number_of_seats,
+    retailer_id: v.retailer_id,
+  })));
+
+  if (services.length) await db.collection("services").insertMany(services.map(s => ({
+    _id: s.additional_service_id,
+    description: s.description,
+    costs: s.costs,
+  })));
+
+  if (ratings.length) await db.collection("ratings").insertMany(ratings.map(r => ({
+    _id: { rater_id: r.rater_id, rated_id: r.rated_id },
+    stars: r.stars,
+  })));
+
+  // 4) Build bookings aggregate
+  const [bookings] = await pool.query(`
+    SELECT b.booking_id, b.start_date, b.end_date, b.total_costs, b.way_of_billing,
+           c.person_id AS customer_id, p.name AS customer_name,
+           v.vehicle_id, v.model, v.producer, v.costs_per_day,
+           r.person_id AS retailer_id, r.company_name,
+           s.additional_service_id, s.description, s.costs
+    FROM Booking b
+    JOIN Customer c ON c.person_id = b.customer_id
+    JOIN Person p ON p.id = c.person_id
+    JOIN Vehicle v ON v.vehicle_id = b.vehicle_id
+    JOIN Retailer r ON r.person_id = v.retailer_id
+    LEFT JOIN Bookings_Services bs ON bs.booking_id = b.booking_id
+    LEFT JOIN AdditionalService s ON s.additional_service_id = bs.additional_service_id
+    ORDER BY b.booking_id
+  `);
+
+  const grouped = new Map();
+  for (const row of bookings) {
+    if (!grouped.has(row.booking_id)) {
+      grouped.set(row.booking_id, {
+        _id: row.booking_id,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        way_of_billing: row.way_of_billing,
+        customer: { person_id: row.customer_id, name: row.customer_name },
+        vehicle: {
+          vehicle_id: row.vehicle_id,
+          model: row.model,
+          producer: row.producer,
+          costs_per_day: row.costs_per_day,
+        },
+        retailer: {
+          person_id: row.retailer_id,
+          company_name: row.company_name,
+        },
+        additionalServices: [],
+        pricing: { total_costs: row.total_costs },
+      });
+    }
+    if (row.additional_service_id) {
+      grouped.get(row.booking_id).additionalServices.push({
+        service_id: row.additional_service_id,
+        description: row.description,
+        costs: row.costs,
+      });
+    }
+  }
+
+  const bookingDocs = Array.from(grouped.values());
+  if (bookingDocs.length) {
+    await db.collection("bookings").insertMany(bookingDocs);
+  }
+
+  await client.close();
+}
+
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -515,6 +656,17 @@ app.post("/api/usecase1/bookings", async (req, res) => {
 
   res.json({ ok: true, booking_id: bookingId, total_costs: total });
 });
+
+app.post("/api/migrate-nosql", async (req, res) => {
+  try {
+    await migrateToMongo();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Migration failed" });
+  }
+});
+
+
 
 
 

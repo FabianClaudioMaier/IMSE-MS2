@@ -59,6 +59,8 @@ const searchInput = document.getElementById("search");
 const refreshButton = document.getElementById("refresh");
 const generateButton = document.getElementById("generate");
 const generateHint = document.getElementById("generate-hint");
+const migrateButton = document.getElementById("migrate-nosql");
+const migrateHint = document.getElementById("migrate-hint");
 const statusEl = document.getElementById("status");
 const tableTitle = document.getElementById("table-title");
 const tableMeta = document.getElementById("table-meta");
@@ -308,6 +310,28 @@ async function generateData() {
     setStatus("Failed to generate data.", true);
   }
 }
+async function migrateNoSql() {
+  if (!migrateButton) return;
+  migrateButton.disabled = true;
+  setStatus("Migrating to NoSQL...");
+  try {
+    const res = await fetch("/api/migrate-nosql", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Migration failed");
+    setStatus("Migration complete.");
+  } catch (err) {
+    setStatus("Migration failed.", true);
+  } finally {
+    migrateButton.disabled = false;
+  }
+}
+
+if (migrateButton) {
+  migrateButton.addEventListener("click", migrateNoSql);
+}
+
+
+
 
 if (refreshButton) {
   refreshButton.addEventListener("click", () => {

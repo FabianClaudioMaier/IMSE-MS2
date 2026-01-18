@@ -1,0 +1,22 @@
+{
+    "_id": "customer1",
+    "name": "Alice Example",
+    "phone_number": "066287327",
+    "eMail": "alice@example.com",
+    "address": "Main Street 1",
+    "stars": 4.5,
+
+    "roles": {
+        "customer": {
+      "customer_number": "C-1001",
+      "driver_license_number": "AB1234567"
+    },
+        "retailer": null
+  },
+
+  "bankAccount": {
+    "account_id": "ba1",
+    "iban": "AT611904300234573201",
+    "bic": "BKAUATWW"
+  }
+}
