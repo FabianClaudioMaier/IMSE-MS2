@@ -39,6 +39,8 @@ VALUES
   ('veh3', 'Yaris', 'Toyota', 60.00, 'W-RT7890', 5, 'p_both1'),
   ('veh4', 'Enyaq', 'Skoda', 95.00, 'W-DN4321', 5, 'p_ret1');
 
+
+/*
 INSERT INTO Booking (booking_id, start_date, end_date, way_of_billing, customer_id, vehicle_id)
 VALUES
   ('b1', '2026-01-05', '2026-01-10', 'CreditCard', 'p_cust1', 'veh1'),
@@ -47,6 +49,8 @@ VALUES
   ('b4', '2026-04-05', '2026-04-07', 'CreditCard', 'p_both1', 'veh4'),
   ('b5', '2026-05-12', '2026-05-18', 'CreditCard', 'p_cust1', 'veh3');
 
+
+*/
 INSERT INTO AdditionalService (additional_service_id, description, costs)
 VALUES
   ('as1', 'ChildSeat', 20.00),

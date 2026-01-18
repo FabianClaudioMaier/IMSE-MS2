@@ -361,38 +361,129 @@ app.post("/api/usecase/bookings/:id/services", async (req, res) => {
 
 
 
+
+
+
+//Da beginnt use case 1
+
+
 app.get("/api/usecase1/customers", async (req, res) => {
-  const [rows] = await pool.query(
-    `SELECT p.id AS person_id, p.name, c.customer_number, c.driver_licencse_number, b.iban
-     FROM Customer c
-     JOIN Person p ON p.id = c.person_id
-     JOIN Bankaccount b ON b.person_id = c.person_id
-     ORDER BY p.name`
-  );
-  res.json({ customers: rows });
+  try {
+    const [rows] = await pool.query(
+      `SELECT p.id AS person_id, p.name, c.customer_number, c.driver_licencse_number, b.iban
+       FROM Customer c
+       JOIN Person p ON p.id = c.person_id
+       JOIN Bankaccount b ON b.person_id = c.person_id
+       ORDER BY p.name`
+    );
+    res.json({ customers: rows });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load customers" });
+  }
 });
 
 app.get("/api/usecase1/vehicles", async (req, res) => {
   const { start, end } = req.query;
   if (!start || !end) return res.status(400).json({ error: "Missing dates" });
 
-  const [rows] = await pool.query(
-    `SELECT v.vehicle_id, v.model, v.producer, v.costs_per_day, v.plate_number
-     FROM Vehicle v
-     LEFT JOIN Booking b
-       ON v.vehicle_id = b.vehicle_id
-      AND b.start_date <= ? AND b.end_date >= ?
-     WHERE b.booking_id IS NULL
-     ORDER BY v.producer, v.model`,
-    [end, start]
-  );
-  res.json({ vehicles: rows });
+  try {
+    const [rows] = await pool.query(
+      `SELECT v.vehicle_id, v.model, v.producer, v.costs_per_day, v.plate_number
+       FROM Vehicle v
+       LEFT JOIN Booking b
+         ON v.vehicle_id = b.vehicle_id
+        AND b.start_date <= ? AND b.end_date >= ?
+       WHERE b.booking_id IS NULL
+       ORDER BY v.producer, v.model`,
+      [end, start]
+    );
+    res.json({ vehicles: rows });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load vehicles" });
+  }
+});
+
+
+app.get("/api/usecase1/report", async (req, res) =>{
+  try{
+    const {from, to, vehicleId}= req.query
+
+
+    const filters= [];
+    const params= [];
+    
+
+
+    if(from){
+      filters.push("b.start_date >= ?");
+      params.push(from);
+    }
+
+    if(to){
+      filters.push("b.end_date <= ?");
+      params.push(to);
+    }
+
+    if(vehicleId){
+      filters.push("v.vehicle_id = ?");
+      params.push(vehicleId);
+    }
+
+    let whereSql= "";
+    if(filters.length>0){
+      whereSql= " WHERE " + filters.join(" AND ");
+    }
+
+
+    const sql =
+    "SELECT " +
+    "b.booking_id, " +
+    "p.name AS customer_name, " +
+    "v.producer, " +
+    "v.model, " +
+    "b.start_date, " +
+    "b.end_date, " +
+    "v.costs_per_day, " +
+    "GREATEST(DATEDIFF(b.end_date, b.start_date), 1) AS days, " +
+    "(v.costs_per_day * GREATEST(DATEDIFF(b.end_date, b.start_date), 1)) AS base_cost, " +
+    "COALESCE(SUM(s.costs), 0) AS additional_cost, " +
+    "(v.costs_per_day * GREATEST(DATEDIFF(b.end_date, b.start_date), 1)) + COALESCE(SUM(s.costs), 0) AS total_cost " +
+    "FROM Booking b " +
+    "JOIN Customer c ON c.person_id = b.customer_id " +
+    "JOIN Person p ON p.id = c.person_id " +
+    "JOIN Vehicle v ON v.vehicle_id = b.vehicle_id " +
+    "LEFT JOIN Bookings_Services bs ON bs.booking_id = b.booking_id " +
+    "LEFT JOIN AdditionalService s ON s.additional_service_id = bs.additional_service_id " +
+    whereSql +
+    "GROUP BY b.booking_id, p.name, v.producer, v.model, b.start_date, b.end_date, v.costs_per_day " +
+    "ORDER BY b.start_date DESC";
+
+    const [rows]= await pool.query(sql, params);
+    res.json({ report: rows });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "database error" });
+  }
+  
 });
 
 app.post("/api/usecase1/bookings", async (req, res) => {
-  const { customerId, vehicleId, startDate, endDate, wayOfBilling } = req.body || {};
-  if (!customerId || !vehicleId || !startDate || !endDate || !wayOfBilling) {
+  const { customerId, vehicleId, startDate, endDate, wayOfBilling } =
+    req.body || {};
+  if (!vehicleId || !startDate || !endDate || !wayOfBilling) {
     return res.status(400).json({ error: "Missing fields" });
+  }
+
+  let resolvedCustomerId = customerId;
+  if (!resolvedCustomerId) {
+    const [customerRows] = await pool.query(
+      "SELECT person_id FROM Customer ORDER BY person_id LIMIT 1"
+    );
+    if (customerRows.length === 0) {
+      return res.status(400).json({ error: "No customers available" });
+    }
+    resolvedCustomerId = customerRows[0].person_id;
   }
 
   const [veh] = await pool.query(
@@ -411,7 +502,15 @@ app.post("/api/usecase1/bookings", async (req, res) => {
   await pool.query(
     `INSERT INTO Booking (booking_id, start_date, end_date, total_costs, way_of_billing, customer_id, vehicle_id)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [bookingId, startDate, endDate, total, wayOfBilling, customerId, vehicleId]
+    [
+      bookingId,
+      startDate,
+      endDate,
+      total,
+      wayOfBilling,
+      resolvedCustomerId,
+      vehicleId,
+    ]
   );
 
   res.json({ ok: true, booking_id: bookingId, total_costs: total });

@@ -4,6 +4,7 @@ const views = {
   usecase1: document.getElementById("view-usecase1"),
   usecase2: document.getElementById("view-usecase2"),
   explore: document.getElementById("view-explore"),
+  "uc1-report": document.getElementById("view-uc1-report"),
 };
 
 function setView(viewName) {
@@ -21,7 +22,7 @@ function setView(viewName) {
   if (viewName === "usecase2" && ucCustomers.length === 0) {
     loadUseCaseCustomers();
   }
-  if (viewName === "usecase1" && uc1Customers.length === 0) {
+  if (viewName === "usecase1" && !uc1CustomersLoaded) {
     loadUc1Customers();
   }
 }
@@ -338,210 +339,174 @@ if (searchInput) {
 
 
 
-// -----------------------------
-// Use case Student 1 flow
-// -----------------------------
-const uc1CustomerSelect = document.getElementById("uc1-customer");
-const uc1CustomerDetails = document.getElementById("uc1-customer-details");
-const uc1StartDate = document.getElementById("uc1-start-date");
-const uc1EndDate = document.getElementById("uc1-end-date");
-const uc1CheckVehicles = document.getElementById("uc1-check-vehicles");
-const uc1VehicleList = document.getElementById("uc1-vehicle-list");
-const uc1VehicleStatus = document.getElementById("uc1-vehicle-status");
-const uc1Summary = document.getElementById("uc1-summary");
-const uc1ConfirmBooking = document.getElementById("uc1-confirm-booking");
-const uc1PaymentPanel = document.getElementById("uc1-payment-panel");
-const uc1ConfirmPayment = document.getElementById("uc1-confirm-payment");
-const uc1CancelPayment = document.getElementById("uc1-cancel-payment");
-const uc1Status = document.getElementById("uc1-status");
+// ===== Use Case 1 – very simple =====
 
-let uc1Customers = [];
-let uc1SelectedCustomer = null;
-let uc1Vehicles = [];
-let uc1SelectedVehicle = null;
+let uc1CustomersLoaded = false;
+let uc1DefaultCustomerId = null;
 
+// Elemente holen (passen zu index.html)
+const customerSelect = document.getElementById("uc1-customer");
+const startInput = document.getElementById("uc1-start");
+const endInput = document.getElementById("uc1-end");
+const searchBtn = document.getElementById("uc1-search");
+const statusP = document.getElementById("uc1-status");
+const vehiclesDiv = document.getElementById("uc1-vehicles");
+const summaryDiv = document.getElementById("uc1-result");
 
-function setUc1Status(message, isError = false) {
-  if (!uc1Status) return;
-  uc1Status.textContent = message;
-  uc1Status.classList.toggle("error", isError);
+// kleine Hilfen
+function setUc1Status(text) {
+  if (statusP) {
+    statusP.textContent = text || "";
+  }
 }
 
+function setSummary(obj) {
+  if (!summaryDiv) {
+    return;
+  }
+  summaryDiv.textContent =
+    typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+}
+
+async function getJson(url) {
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
+
+async function postJson(url, body) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
+
+// 1) Customers laden
 async function loadUc1Customers() {
-  if (!uc1CustomerSelect) return;
   try {
-    const res = await fetch("/api/usecase1/customers");
-    const data = await res.json();
-    uc1Customers = data.customers || [];
-    uc1CustomerSelect.innerHTML = "<option value=''>Select a customer</option>";
-    uc1Customers.forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c.person_id;
-      opt.textContent = `${c.name} (${c.customer_number})`;
-      uc1CustomerSelect.appendChild(opt);
-    });
-  } catch {
-    setUc1Status("Failed to load customers.", true);
-  }
-}
+    setUc1Status("Loading customers...");
+    const data = await getJson("/api/usecase1/customers");
 
-function renderUc1CustomerDetails() {
-  if (!uc1CustomerDetails) return;
-  if (!uc1SelectedCustomer) {
-    uc1CustomerDetails.textContent = "No customer selected.";
-    return;
-  }
-  uc1CustomerDetails.innerHTML = `
-    <div><strong>${uc1SelectedCustomer.name}</strong></div>
-    <div>Customer #: ${uc1SelectedCustomer.customer_number}</div>
-    <div>Driver license: ${uc1SelectedCustomer.driver_licencse_number}</div>
-    <div>IBAN: ${uc1SelectedCustomer.iban}</div>
-  `;
-}
+    uc1DefaultCustomerId = data.customers?.[0]?.person_id || null;
 
-async function loadUc1Vehicles() {
-  if (!uc1StartDate?.value || !uc1EndDate?.value) {
-    setUc1Status("Select start and end date.", true);
-    return;
-  }
-  try {
-    const qs = new URLSearchParams({
-      start: uc1StartDate.value,
-      end: uc1EndDate.value,
-    });
-    const res = await fetch(`/api/usecase1/vehicles?${qs.toString()}`);
-    const data = await res.json();
-    uc1Vehicles = data.vehicles || [];
-    renderUc1VehicleList();
-  } catch {
-    setUc1Status("Failed to load vehicles.", true);
-  }
-}
-
-function renderUc1VehicleList() {
-  if (!uc1VehicleList) return;
-  uc1VehicleList.innerHTML = "";
-  if (uc1Vehicles.length === 0) {
-    uc1VehicleStatus.textContent = "No vehicles available.";
-    return;
-  }
-  uc1VehicleStatus.textContent = "Select a vehicle.";
-  uc1Vehicles.forEach((v) => {
-    const card = document.createElement("button");
-    card.type = "button";
-    card.className = "booking-card";
-    if (uc1SelectedVehicle?.vehicle_id === v.vehicle_id) {
-      card.classList.add("active");
+    if (customerSelect) {
+      customerSelect.innerHTML = "";
+      for (const c of data.customers) {
+        const opt = document.createElement("option");
+        opt.value = c.person_id; // interne ID
+        opt.textContent = `${c.name} (Nr: ${c.customer_number})`;
+        customerSelect.appendChild(opt);
+      }
     }
-    card.innerHTML = `
-      <div><strong>${v.producer} ${v.model}</strong></div>
-      <div>Plate: ${v.plate_number}</div>
-      <div>Costs/day: ${formatMoney(v.costs_per_day)}</div>
-    `;
-    card.addEventListener("click", () => {
-      uc1SelectedVehicle = v;
-      renderUc1VehicleList();
-      renderUc1Summary();
-    });
-    uc1VehicleList.appendChild(card);
-  });
-}
 
-function renderUc1Summary() {
-  if (!uc1Summary) return;
-  const days =
-    uc1StartDate?.value && uc1EndDate?.value
-      ? Math.max(
-          (new Date(uc1EndDate.value) - new Date(uc1StartDate.value)) /
-            (1000 * 60 * 60 * 24),
-          1
-        )
-      : 0;
-  const base =
-    uc1SelectedVehicle ? days * Number(uc1SelectedVehicle.costs_per_day) : 0;
-
-  uc1Summary.innerHTML = `
-    <div class="summary-line"><span>Days</span><span>${days}</span></div>
-    <div class="summary-line"><span>Estimated base cost</span><span>${formatMoney(base)}</span></div>
-  `;
-
-  if (uc1ConfirmBooking) {
-    uc1ConfirmBooking.disabled = !uc1SelectedCustomer || !uc1SelectedVehicle;
+    if (!uc1DefaultCustomerId) {
+      setUc1Status("No customers available. Generate data first.");
+      return;
+    }
+    setUc1Status("");
+    uc1CustomersLoaded = true;
+  } catch (e) {
+    setUc1Status("Error: " + e.message);
   }
 }
 
-async function confirmUc1Booking() {
-  if (!uc1SelectedCustomer || !uc1SelectedVehicle) {
-    setUc1Status("Select customer and vehicle first.", true);
+// 2) Fahrzeuge suchen
+async function searchVehicles() {
+  if (vehiclesDiv) {
+    vehiclesDiv.innerHTML = "";
+  }
+  setSummary("");
+
+  const start = startInput ? startInput.value : "";
+  const end = endInput ? endInput.value : "";
+  const customerId = customerSelect?.value || uc1DefaultCustomerId;
+
+  if (!customerId) {
+    setUc1Status("No customers available. Generate data first.");
     return;
   }
+  if (!start || !end) {
+    setUc1Status("Please select start and end date.");
+    return;
+  }
+  if (new Date(start) >= new Date(end)) {
+    setUc1Status("Start date must be before end date.");
+    return;
+  }
+
   try {
-    const res = await fetch("/api/usecase1/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerId: uc1SelectedCustomer.person_id,
-        vehicleId: uc1SelectedVehicle.vehicle_id,
-        startDate: uc1StartDate.value,
-        endDate: uc1EndDate.value,
-        wayOfBilling: "CreditCard",
-        confirmPayment: true,
-      }),
-    });
-    if (!res.ok) throw new Error();
-    setUc1Status("Reservation created.");
-  } catch {
-    setUc1Status("Failed to create reservation.", true);
+    setUc1Status("Searching vehicles...");
+    const data = await getJson(
+      `/api/usecase1/vehicles?start=${start}&end=${end}`
+    );
+
+    setUc1Status("");
+
+    if (data.vehicles.length === 0) {
+      setUc1Status("No vehicles available.");
+      return;
+    }
+
+    // ganz einfache Liste
+    for (const v of data.vehicles) {
+      const row = document.createElement("div");
+      row.style.marginBottom = "6px";
+
+      row.textContent =
+        `${v.producer} ${v.model} | ${v.plate_number} | €${v.costs_per_day}/day`;
+
+      const btn = document.createElement("button");
+      btn.textContent = "Reserve";
+      btn.style.marginLeft = "10px";
+      btn.onclick = () => reserveVehicle(v.vehicle_id, start, end, customerId);
+
+      row.appendChild(btn);
+      if (vehiclesDiv) {
+        vehiclesDiv.appendChild(row);
+      }
+    }
+  } catch (e) {
+    setUc1Status("Error: " + e.message);
   }
 }
 
+// 3) Reservieren
+async function reserveVehicle(vehicleId, startDate, endDate, customerId) {
+  try {
+    setUc1Status("Creating reservation...");
 
-if (uc1CustomerSelect) {
-  uc1CustomerSelect.addEventListener("change", () => {
-    const selectedId = uc1CustomerSelect.value;
-    uc1SelectedCustomer =
-      uc1Customers.find((c) => c.person_id === selectedId) || null;
-    renderUc1CustomerDetails();
-  });
-}
+    const payload = {
+      customerId: customerId,
+      vehicleId: vehicleId,
+      startDate: startDate,
+      endDate: endDate,
+      wayOfBilling: "BANK_TRANSFER",
+    };
 
-if (uc1CheckVehicles) {
-  uc1CheckVehicles.addEventListener("click", () => {
-    loadUc1Vehicles();
-  });
-}
+    const data = await postJson("/api/usecase1/bookings", payload);
 
-if (uc1ConfirmBooking) {
-  uc1ConfirmBooking.addEventListener("click", () => {
-    showUc1PaymentPanel();
-    setUc1Status("Confirm payment to finalize reservation.");
-  });
-}
+    setUc1Status("Reservation created!");
+    setSummary(data);
 
-if (uc1ConfirmPayment) {
-  uc1ConfirmPayment.addEventListener("click", () => {
-    confirmUc1Booking();
-  });
-}
-
-if (uc1CancelPayment) {
-  uc1CancelPayment.addEventListener("click", () => {
-    hideUc1PaymentPanel();
-    setUc1Status("Payment canceled.");
-  });
-}
-
-function showUc1PaymentPanel() {
-  if (uc1PaymentPanel) {
-    uc1PaymentPanel.classList.remove("hidden");
+    // Liste neu laden (Fahrzeug verschwindet)
+    await searchVehicles();
+  } catch (e) {
+    setUc1Status("Error: " + e.message);
   }
 }
 
-function hideUc1PaymentPanel() {
-  if (uc1PaymentPanel) {
-    uc1PaymentPanel.classList.add("hidden");
-  }
+// Button verbinden
+if (searchBtn) {
+  searchBtn.addEventListener("click", searchVehicles);
 }
+
+// Start
+loadUc1Customers();
 
 
 
@@ -985,3 +950,107 @@ loadTables();
 loadSeedStatus();
 loadUseCaseCustomers();
 loadUc1Customers();
+
+
+// ===== Analytics Report (Use Case Student 1) =====
+
+const repFrom = document.getElementById("rep-from");
+const repTo = document.getElementById("rep-to");
+const repVehicle = document.getElementById("rep-vehicle");
+const repBtn = document.getElementById("rep-btn");
+const repStatus = document.getElementById("rep-status");
+const repOut = document.getElementById("rep-out");
+
+function setRepStatus(text) {
+  if (repStatus) {
+    repStatus.textContent = text || "";
+  }
+}
+
+function renderReport(rows) {
+  if (!repOut) {
+    return;
+  }
+  repOut.innerHTML = "";
+
+  if (!rows || rows.length === 0) {
+    repOut.textContent = "No bookings found.";
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.border = "1";
+  table.cellPadding = "6";
+
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Booking</th>
+        <th>Customer</th>
+        <th>Vehicle</th>
+        <th>Period</th>
+        <th>Days</th>
+        <th>Base cost</th>
+        <th>Additional</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+
+  const tbody = table.querySelector("tbody");
+
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.booking_id}</td>
+      <td>${r.customer_name}</td>
+      <td>${r.producer} ${r.model}</td>
+      <td>${r.start_date} → ${r.end_date}</td>
+      <td>${r.days}</td>
+      <td>${r.base_cost}</td>
+      <td>${r.additional_cost}</td>
+      <td><b>${r.total_cost}</b></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+  repOut.appendChild(table);
+}
+
+async function loadReport() {
+  if (!repOut || !repFrom || !repTo || !repVehicle) {
+    return;
+  }
+  try {
+    setRepStatus("Loading report...");
+    repOut.innerHTML = "";
+
+    const params = new URLSearchParams();
+    if (repFrom.value) params.set("from", repFrom.value);
+    if (repTo.value) params.set("to", repTo.value);
+    if (repVehicle.value) params.set("vehicleId", repVehicle.value.trim());
+
+    const url =
+      "/api/usecase1/report" +
+      (params.toString() ? "?" + params.toString() : "");
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setRepStatus(data.error || "Error loading report");
+      return;
+    }
+
+    setRepStatus("");
+    renderReport(data.report);
+  } catch (err) {
+    setRepStatus("Error: " + err.message);
+  }
+}
+
+if (repBtn) {
+  repBtn.addEventListener("click", loadReport);
+}

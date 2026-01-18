@@ -15,9 +15,10 @@
         </div>
         <nav class="nav">
           <button class="nav-button active" data-view="home" type="button">Home</button>
-          <button class="nav-button" data-view="usecase1" type="button" >Use Case Student 1</button>
+          <button class="nav-button" data-view="usecase1" type="button" >Create new Reservation</button>
           <button class="nav-button" data-view="usecase2" type="button">Use Case Student 2</button>
           <button class="nav-button" data-view="explore" type="button">Explore Data</button>
+          <button class="nav-button" data-view="uc1-report" type="button">Analytics UC1</button>
         </nav>
         <div class="sidebar-footer">
           <p>Vehicle booking system UI</p>
@@ -49,16 +50,12 @@
 
           <div class="home-actions">
             <button id="home-uc1" class="card-button" type="button">
-              Use Case Student 1
+              Create new Reservation
             </button>
             <button id="home-uc2" class="card-button accent" type="button">
               Use Case Student 2
             </button>
           </div>
-
-          <p id="home-note" class="status">
-            Use Case Student 1 is not implemented yet.
-          </p>
         </section>
 
 
@@ -68,68 +65,54 @@
 
 
         
-
-        <section id= "view-usecase1" class="view">
-          <header class="view-header">
+        <section id="view-usecase1" class="view">
+          <header class="hero">
             <div>
-              <p class="tag">Use Case Student1</p>
-              <h2>Create a Vehicle Reservation</h2>
-              <p class= "subtitle"> Select customer, date, vehicle and confirm</p>
-
+              <p class="tag">Student 1</p>
+              <h1>Create reservation</h1>
+              <p class="subtitle">Select customer, choose dates, search vehicles, reserve.</p>
             </div>
-
           </header>
+        
+          <div class="card">
+            <h2>Reservation</h2>
 
-          <div class="usecase-grid">
 
-              <section class="panel">
-                <h3>1. Select customer</h3>
-                <label for="uc1-customer">Customer</label>
-                <select id="uc1-customer"></select>
-                <div id="uc1-customer-details" class="info-card"></div>
-              </section>
-  
-              <section class="panel">
-                <h3>2. Select dates</h3>
-                <label for="uc1-start-date"> Start date</label>
-                <input id="uc1-start-date" type="date">
-                <label for="uc1-end-date"> End date</label>
-                <input id="uc1-end-date" type="date">
-
-                <button id="uc1-check-vehicles" class="accent" type="button"> Check available Cars</button>
-                <p id="uc1-date-status" class="status">
-                  Select a date to load vehicles
-                </p>
-              </section>
-  
-              <section class="panel">
-                <h3>3. Choose vehicle</h3>
-                <div id="uc1-vehicle-list" class="card-list"></div>
-                <p id="uc1-vehicle-status" class="status">Select dates to see available vehicles.</p>
-              </section>
-  
-              <section class="panel">
-                <h3>4. Confirm reservation</h3>
-                <div id="uc1-summary" class="summary"></div>
-                <button id="uc1-confirm-booking" class="accent" type="button">Confirm reservation</button>
-                <div id="uc1-payment-panel" class="payment hidden">
-                  <p>Confirm payment for this reservation.</p>
-                  <div class="payment-actions">
-                    <button id="uc1-confirm-payment" class="accent" type="button">Confirm payment</button>
-                    <button id="uc1-cancel-payment" type="button">Cancel</button>
-                  </div>
-                </div>
-                <p id="uc1-status" class="status">Follow the steps to create a booking.</p>
-              </section>
+            <div class="form-row">
+              <label for="uc1-customer">Customer</label>
+              <select id="uc1-customer"></select>
+            </div>
+      
+        
+            <div class="form-row">
+              <label for="uc1-start">Start date</label>
+              <input id="uc1-start" type="date" />
+            </div>
+        
+            <div class="form-row">
+              <label for="uc1-end">End date</label>
+              <input id="uc1-end" type="date" />
+            </div>
+        
+            <div class="form-row">
+              <button id="uc1-search" class="card-button" type="button"> Search available vehicles</button>
+            </div>
+        
+            <p id="uc1-status" class="status"></p>
           </div>
-          
+        
+          <div class="card">
+            <h2>Available vehicles</h2>
+            <div id="uc1-vehicles"></div>
+          </div>
+        
 
           
 
 
 
         </section>
-
+        
         
 
 
@@ -270,6 +253,39 @@
               </div>
             </section>
           </div>
+        </section>
+
+
+
+        <section id="view-uc1-report" class="view">
+          <div class="card">
+            <h2>Analytics Report</h2>
+          
+            <div class="form-row">
+              <label for="rep-from">From</label>
+              <input id="rep-from" type="date" />
+            </div>
+          
+            <div class="form-row">
+              <label for="rep-to">To</label>
+              <input id="rep-to" type="date" />
+            </div>
+          
+            <div class="form-row">
+              <label for="rep-vehicle">Vehicle (optional vehicle_id)</label>
+              <input id="rep-vehicle" type="text" placeholder="e.g. v_123" />
+            </div>
+          
+            <div class="form-row">
+              <button id="rep-btn" class="card-button" type="button">
+                Show report
+              </button>
+            </div>
+          
+            <p id="rep-status" class="status"></p>
+            <div id="rep-out"></div>
+          </div>
+          
         </section>
       </main>
     </div>

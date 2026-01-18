@@ -18,6 +18,9 @@
   box-sizing: border-box;
 }
 
+
+
+
 body {
   margin: 0;
   font-family: "Space Grotesk", "Noto Sans", "Helvetica", sans-serif;
@@ -37,6 +40,9 @@ body::before {
   pointer-events: none;
   z-index: 0;
 }
+
+
+
 
 .app {
   position: relative;
