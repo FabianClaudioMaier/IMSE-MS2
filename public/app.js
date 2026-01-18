@@ -431,7 +431,7 @@ async function postJson(url, body) {
 async function loadUc1Customers() {
   try {
     setUc1Status("Loading customers...");
-    const data = await getJson("/api/usecase1/customers");
+    const data = await getJson("/api/nosql/usecase1/customers");
 
     if(data.customers && data.customers.length>0){
       uc1DefaultCustomerId= data.customers[0].person_id;
@@ -534,7 +534,7 @@ async function searchVehicles(options = {}) {
       setUc1Status("Searching vehicles...");
     }
     const data = await getJson(
-      `/api/usecase1/vehicles?start=${start}&end=${end}`
+      `/api/nosql/usecase1/vehicles?start=${start}&end=${end}`
     );
 
     if (!preserveStatus) {
@@ -598,7 +598,7 @@ async function reserveVehicle(vehicleId, startDate, endDate, customerId) {
       wayOfBilling: "BANK_TRANSFER",
     };
 
-    const data = await postJson("/api/usecase1/bookings", daten);
+    const data = await postJson("/api/nosql/usecase1/bookings", daten);
 
     setUc1Status("Reservation created!");
     setSummary(data);
@@ -1131,16 +1131,16 @@ function renderReport(rows) {
 
   for (const r of rows) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.booking_id}</td>
-      <td>${r.customer_name}</td>
-      <td>${r.producer} ${r.model}</td>
-      <td>${r.start_date} → ${r.end_date}</td>
-      <td>${r.days}</td>
-      <td>${r.base_cost}</td>
-      <td>${r.additional_cost}</td>
-      <td><b>${r.total_cost}</b></td>
-    `;
+    tr.innerHTML =
+    "<td>" + r.booking_id + "</td>" +
+    "<td>" + r.customer_name + "</td>" +
+    "<td>" + r.producer + " " + r.model + "</td>" +
+    "<td>" + r.start_date + " -> " + r.end_date + "</td>" +
+    "<td>" + r.days + "</td>" +
+    "<td>" + r.base_cost + "</td>" +
+    "<td>" + r.additional_cost + "</td>" +
+    "<td><b>" + r.total_cost + "</b></td>";
+  
     tbody.appendChild(tr);
   }
 
@@ -1170,7 +1170,7 @@ async function loadReport() {
     }
 
     const url =
-      "/api/usecase1/report" +
+      "/api/nosql/usecase1/report" +
       (params.toString() ? "?" + params.toString() : "");
 
     const res = await fetch(url);
