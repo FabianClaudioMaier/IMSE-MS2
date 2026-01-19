@@ -339,8 +339,12 @@ async function migrateNoSql() {
     setStatus("Migration complete.");
     if (migrateHint) {
       migrateHint.textContent =
-        "NoSQL mode active for Use Case 2 and Analytics UC2.";
+        "NoSQL mode active for UC1, UC2, and analytics reports.";
     }
+    usecase1ApiBase = "/api/usecase1";
+    uc1CustomersLoaded = false;
+    uc1DefaultCustomerId = null;
+    loadUc1Customers();
     ucCustomers = [];
     ucSelectedCustomer = null;
     clearUseCaseData();
@@ -403,6 +407,7 @@ if (searchInput) {
 
 let uc1CustomersLoaded = false;
 let uc1DefaultCustomerId = null;
+let usecase1ApiBase = "/api/usecase1";
 
 const customerSelect = document.getElementById("uc1-customer");
 const startInput = document.getElementById("uc1-start");
@@ -460,7 +465,7 @@ async function loadUc1Customers() {
 
 
 
-    const data = await getJson("/api/nosql/usecase1/customers");
+    const data = await getJson(`${usecase1ApiBase}/customers`);
 
     if(data.customers && data.customers.length>0){
       uc1DefaultCustomerId= data.customers[0].person_id;
@@ -563,7 +568,7 @@ async function searchVehicles(options = {}) {
       setUc1Status("Searching vehicles...");
     }
     const data = await getJson(
-      `/api/nosql/usecase1/vehicles?start=${start}&end=${end}`
+      `${usecase1ApiBase}/vehicles?start=${start}&end=${end}`
     );
 
     if (!preserveStatus) {
@@ -627,7 +632,7 @@ async function reserveVehicle(vehicleId, startDate, endDate, customerId) {
       wayOfBilling: "BANK_TRANSFER",
     };
 
-    const data = await postJson("/api/nosql/usecase1/bookings", daten);
+    const data = await postJson(`${usecase1ApiBase}/bookings`, daten);
 
     setUc1Status("Reservation created!");
     setSummary(data);
@@ -1200,7 +1205,7 @@ async function loadReport() {
     }
 
     const url =
-      "/api/nosql/usecase1/report" +
+      `${usecase1ApiBase}/report` +
       (params.toString() ? "?" + params.toString() : "");
 
     const res = await fetch(url);
