@@ -5,6 +5,7 @@ const views = {
   usecase2: document.getElementById("view-usecase2"),
   explore: document.getElementById("view-explore"),
   "uc1-report": document.getElementById("view-uc1-report"),
+  "uc2-report": document.getElementById("view-uc2-report"),
 };
 
 function setView(viewName) {
@@ -335,7 +336,16 @@ async function migrateNoSql() {
     const res = await fetch("/api/migrate-nosql", { method: "POST" });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Migration failed");
-    setMigrateStatus("Migration complete.");
+    setStatus("Migration complete.");
+    if (migrateHint) {
+      migrateHint.textContent =
+        "NoSQL mode active for Use Case 2 and Analytics UC2.";
+    }
+    ucCustomers = [];
+    ucSelectedCustomer = null;
+    clearUseCaseData();
+    renderCustomerDetails();
+    loadUseCaseCustomers();
   } catch (err) {
     setMigrateStatus("Migration failed.", true);
   } finally {
@@ -1210,4 +1220,133 @@ async function loadReport() {
 
 if (repBtn) {
   repBtn.addEventListener("click", loadReport);
+}
+
+
+// ===== Analytics Report (Use Case Student 2) =====
+
+const uc2RepFrom = document.getElementById("uc2-rep-from");
+const uc2RepTo = document.getElementById("uc2-rep-to");
+const uc2RepCustomer = document.getElementById("uc2-rep-customer");
+const uc2RepRetailer = document.getElementById("uc2-rep-retailer");
+const uc2RepBtn = document.getElementById("uc2-rep-btn");
+const uc2RepStatus = document.getElementById("uc2-rep-status");
+const uc2RepOut = document.getElementById("uc2-rep-out");
+
+function setUc2RepStatus(text) {
+  if (uc2RepStatus) {
+    uc2RepStatus.textContent = text || "";
+  }
+}
+
+function renderUc2Report(rows) {
+  if (!uc2RepOut) {
+    return;
+  }
+  uc2RepOut.innerHTML = "";
+
+  if (!rows || rows.length === 0) {
+    uc2RepOut.textContent = "No bookings with additional services found.";
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.border = "1";
+  table.cellPadding = "6";
+
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Booking</th>
+        <th>Customer</th>
+        <th>Retailer</th>
+        <th>Vehicle</th>
+        <th>Bank account</th>
+        <th>Period</th>
+        <th>Days</th>
+        <th>Base cost</th>
+        <th>Additional services</th>
+        <th>Additional cost</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+
+  const tbody = table.querySelector("tbody");
+
+  for (const r of rows) {
+    const services = r.additional_services_list
+      ? `${r.additional_services_list} (${r.additional_services_count})`
+      : "-";
+    const bankAccount = r.customer_iban
+      ? `${r.customer_iban} / ${formatCell(r.customer_bic)}`
+      : "-";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${formatCell(r.booking_id)}</td>
+      <td>${formatCell(r.customer_name)} (${formatCell(r.customer_id)})</td>
+      <td>${formatCell(r.retailer_name)} (${formatCell(r.retailer_id)})</td>
+      <td>${formatCell(r.producer)} ${formatCell(r.model)} (${formatCell(
+      r.vehicle_id
+    )})</td>
+      <td>${bankAccount}</td>
+      <td>${formatCell(r.start_date)} → ${formatCell(r.end_date)}</td>
+      <td>${formatCell(r.rental_days)}</td>
+      <td>${formatMoney(r.base_cost)}</td>
+      <td>${services}</td>
+      <td>${formatMoney(r.additional_costs)}</td>
+      <td><b>${formatMoney(r.total_cost)}</b></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+  uc2RepOut.appendChild(table);
+}
+
+async function loadUc2Report() {
+  if (!uc2RepOut || !uc2RepFrom || !uc2RepTo) {
+    return;
+  }
+
+  try {
+    setUc2RepStatus("Loading report...");
+    uc2RepOut.innerHTML = "";
+
+    const params = new URLSearchParams();
+    if (uc2RepFrom.value) {
+      params.set("from", uc2RepFrom.value);
+    }
+    if (uc2RepTo.value) {
+      params.set("to", uc2RepTo.value);
+    }
+    if (uc2RepCustomer && uc2RepCustomer.value.trim()) {
+      params.set("customerId", uc2RepCustomer.value.trim());
+    }
+    if (uc2RepRetailer && uc2RepRetailer.value.trim()) {
+      params.set("retailerId", uc2RepRetailer.value.trim());
+    }
+
+    const url =
+      "/api/usecase2/report" +
+      (params.toString() ? "?" + params.toString() : "");
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setUc2RepStatus(data.error || "Error loading report");
+      return;
+    }
+
+    setUc2RepStatus("");
+    renderUc2Report(data.report);
+  } catch (err) {
+    setUc2RepStatus("Error: " + err.message);
+  }
+}
+
+if (uc2RepBtn) {
+  uc2RepBtn.addEventListener("click", loadUc2Report);
 }
