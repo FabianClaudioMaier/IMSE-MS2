@@ -320,6 +320,15 @@ async function migrateNoSql() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Migration failed");
     setStatus("Migration complete.");
+    if (migrateHint) {
+      migrateHint.textContent =
+        "NoSQL mode active for Use Case 2 and Analytics UC2.";
+    }
+    ucCustomers = [];
+    ucSelectedCustomer = null;
+    clearUseCaseData();
+    renderCustomerDetails();
+    loadUseCaseCustomers();
   } catch (err) {
     setStatus("Migration failed.", true);
   } finally {

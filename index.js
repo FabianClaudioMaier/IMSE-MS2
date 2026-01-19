@@ -41,6 +41,60 @@ const mongoDbName = process.env.MONGO_DB || "imse_nosql";
 
 
 const pool = mysql.createPool(dbConfig);
+const defaultDbMode = process.env.DB_MODE === "nosql" ? "nosql" : "sql";
+let dbMode = defaultDbMode;
+let mongoClient = null;
+let mongoDb = null;
+
+function isNoSqlMode() {
+  return dbMode === "nosql";
+}
+
+function setDbMode(mode) {
+  dbMode = mode === "nosql" ? "nosql" : "sql";
+}
+
+async function getMongoDb() {
+  if (mongoDb) {
+    return mongoDb;
+  }
+  mongoClient = new MongoClient(mongoUrl);
+  await mongoClient.connect();
+  mongoDb = mongoClient.db(mongoDbName);
+  return mongoDb;
+}
+
+function toUtcMs(dateStr) {
+  if (!dateStr || typeof dateStr !== "string") {
+    return null;
+  }
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) {
+    return null;
+  }
+  const year = Number.parseInt(parts[0], 10);
+  const month = Number.parseInt(parts[1], 10);
+  const day = Number.parseInt(parts[2], 10);
+  if (!year || !month || !day) {
+    return null;
+  }
+  return Date.UTC(year, month - 1, day);
+}
+
+function calcRentalDays(startDate, endDate) {
+  const startMs = toUtcMs(startDate);
+  const endMs = toUtcMs(endDate);
+  if (startMs === null || endMs === null) {
+    return 1;
+  }
+  const diffDays = Math.round((endMs - startMs) / 86400000);
+  return Math.max(diffDays, 1);
+}
+
+function asNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
 
 async function waitForDatabase() {
   const maxAttempts = 25;
@@ -193,6 +247,7 @@ async function migrateToMongo() {
     SELECT b.booking_id, b.start_date, b.end_date, b.total_costs, b.way_of_billing,
            c.person_id AS customer_id, p.name AS customer_name,
            v.vehicle_id, v.model, v.producer, v.costs_per_day,
+           v.plate_number, v.number_of_seats,
            r.person_id AS retailer_id, r.company_name,
            s.additional_service_id, s.description, s.costs
     FROM Booking b
@@ -219,6 +274,8 @@ async function migrateToMongo() {
           model: row.model,
           producer: row.producer,
           costs_per_day: row.costs_per_day,
+          plate_number: row.plate_number,
+          number_of_seats: row.number_of_seats,
         },
         retailer: {
           person_id: row.retailer_id,
@@ -243,6 +300,280 @@ async function migrateToMongo() {
   }
 
   await client.close();
+}
+
+async function getUseCaseCustomersNoSql() {
+  const db = await getMongoDb();
+  const customers = await db
+    .collection("persons")
+    .find({ "roles.customer": { $ne: null }, bankAccount: { $ne: null } })
+    .sort({ name: 1 })
+    .toArray();
+
+  return customers.map((person) => ({
+    person_id: person._id,
+    name: person.name,
+    eMail: person.eMail,
+    phone_number: person.phone_number,
+    address: person.address,
+    customer_number: person.roles?.customer?.customer_number,
+    driver_licencse_number: person.roles?.customer?.driver_licencse_number,
+    account_id: person.bankAccount?.account_id,
+    iban: person.bankAccount?.iban,
+    bic: person.bankAccount?.bic,
+  }));
+}
+
+async function getUseCaseBookingsNoSql(customerId) {
+  const db = await getMongoDb();
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const bookings = await db
+    .collection("bookings")
+    .find({
+      "customer.person_id": customerId,
+      start_date: { $gte: todayStr },
+    })
+    .sort({ start_date: 1, _id: 1 })
+    .toArray();
+
+  if (bookings.length === 0) {
+    return [];
+  }
+
+  const vehicleIds = bookings
+    .map((booking) => booking.vehicle?.vehicle_id)
+    .filter(Boolean);
+  const vehicles = vehicleIds.length
+    ? await db
+        .collection("vehicles")
+        .find({ _id: { $in: vehicleIds } })
+        .toArray()
+    : [];
+  const vehicleMap = new Map(
+    vehicles.map((vehicle) => [vehicle._id, vehicle])
+  );
+
+  return bookings.map((booking) => {
+    const vehicleInfo = booking.vehicle || {};
+    const vehicleRef = vehicleMap.get(vehicleInfo.vehicle_id) || {};
+    const costsPerDay = asNumber(
+      vehicleInfo.costs_per_day ?? vehicleRef.costs_per_day
+    );
+    const days = calcRentalDays(booking.start_date, booking.end_date);
+    const baseCost = days * costsPerDay;
+    const extrasCost = (booking.additionalServices || []).reduce(
+      (sum, service) => sum + asNumber(service.costs),
+      0
+    );
+    const totalCost = baseCost + extrasCost;
+
+    return {
+      booking_id: booking._id,
+      start_date: booking.start_date,
+      end_date: booking.end_date,
+      way_of_billing: booking.way_of_billing,
+      vehicle_id: vehicleInfo.vehicle_id,
+      total_costs: booking.pricing?.total_costs ?? null,
+      model: vehicleInfo.model ?? vehicleRef.model,
+      producer: vehicleInfo.producer ?? vehicleRef.producer,
+      costs_per_day: costsPerDay,
+      plate_number: vehicleInfo.plate_number ?? vehicleRef.plate_number,
+      number_of_seats: vehicleInfo.number_of_seats ?? vehicleRef.number_of_seats,
+      days,
+      base_cost: baseCost,
+      extras_cost: extrasCost,
+      total_cost: totalCost,
+    };
+  });
+}
+
+async function getUseCaseServicesNoSql(bookingId) {
+  const db = await getMongoDb();
+  const booking = await db.collection("bookings").findOne({ _id: bookingId });
+  if (!booking) {
+    return null;
+  }
+
+  const current = (booking.additionalServices || []).map((service) => ({
+    additional_service_id: service.service_id,
+    description: service.description,
+    costs: service.costs,
+  }));
+  current.sort((a, b) => a.description.localeCompare(b.description));
+
+  const currentIds = new Set(
+    current.map((service) => service.additional_service_id)
+  );
+  const services = await db
+    .collection("services")
+    .find()
+    .sort({ description: 1 })
+    .toArray();
+  const available = services
+    .filter((service) => !currentIds.has(service._id))
+    .map((service) => ({
+      additional_service_id: service._id,
+      description: service.description,
+      costs: service.costs,
+    }));
+
+  return { available, current };
+}
+
+async function addUseCaseServicesNoSql(bookingId, payload) {
+  const { customerId, serviceIds } = payload;
+  const db = await getMongoDb();
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const booking = await db.collection("bookings").findOne({
+    _id: bookingId,
+    "customer.person_id": customerId,
+    start_date: { $gte: todayStr },
+  });
+  if (!booking) {
+    return { error: "Booking not found or inactive", status: 404 };
+  }
+
+  const person = await db.collection("persons").findOne(
+    { _id: customerId },
+    { projection: { bankAccount: 1 } }
+  );
+  if (!person?.bankAccount) {
+    return { error: "Customer has no bank account", status: 400 };
+  }
+
+  const uniqueServiceIds = [...new Set(serviceIds)];
+  const services = await db
+    .collection("services")
+    .find({ _id: { $in: uniqueServiceIds } })
+    .toArray();
+  if (services.length !== uniqueServiceIds.length) {
+    return { error: "Invalid additional service selection", status: 400 };
+  }
+
+  const existingServices = booking.additionalServices || [];
+  const existingIds = new Set(
+    existingServices.map((service) => service.service_id)
+  );
+  const newServices = services
+    .filter((service) => !existingIds.has(service._id))
+    .map((service) => ({
+      service_id: service._id,
+      description: service.description,
+      costs: service.costs,
+    }));
+  const updatedServices = existingServices.concat(newServices);
+
+  const costsPerDay = asNumber(booking.vehicle?.costs_per_day);
+  const days = calcRentalDays(booking.start_date, booking.end_date);
+  const baseCost = days * costsPerDay;
+  const extrasCost = updatedServices.reduce(
+    (sum, service) => sum + asNumber(service.costs),
+    0
+  );
+  const totalCost = baseCost + extrasCost;
+
+  await db.collection("bookings").updateOne(
+    { _id: bookingId },
+    {
+      $set: {
+        additionalServices: updatedServices,
+        "pricing.total_costs": totalCost,
+      },
+    }
+  );
+
+  return { baseCost, extrasCost, totalCost };
+}
+
+async function getUseCase2ReportNoSql(filters) {
+  const db = await getMongoDb();
+  const query = { "additionalServices.0": { $exists: true } };
+
+  if (filters.from || filters.to) {
+    query.start_date = {};
+    if (filters.from) {
+      query.start_date.$gte = filters.from;
+    }
+    if (filters.to) {
+      query.start_date.$lt = filters.to;
+    }
+  }
+
+  if (filters.customerId) {
+    query["customer.person_id"] = filters.customerId;
+  }
+
+  if (filters.retailerId) {
+    query["retailer.person_id"] = filters.retailerId;
+  }
+
+  const bookings = await db
+    .collection("bookings")
+    .find(query)
+    .sort({ start_date: -1 })
+    .toArray();
+
+  if (bookings.length === 0) {
+    return [];
+  }
+
+  const customerIds = [
+    ...new Set(
+      bookings.map((booking) => booking.customer?.person_id).filter(Boolean)
+    ),
+  ];
+  const persons = customerIds.length
+    ? await db
+        .collection("persons")
+        .find({ _id: { $in: customerIds } }, { projection: { bankAccount: 1 } })
+        .toArray()
+    : [];
+  const personMap = new Map(persons.map((person) => [person._id, person]));
+
+  return bookings.map((booking) => {
+    const vehicle = booking.vehicle || {};
+    const additionalServices = booking.additionalServices || [];
+    const rentalDays = calcRentalDays(booking.start_date, booking.end_date);
+    const costPerDay = asNumber(vehicle.costs_per_day);
+    const baseCost = rentalDays * costPerDay;
+    const additionalCosts = additionalServices.reduce(
+      (sum, service) => sum + asNumber(service.costs),
+      0
+    );
+    const totalCost = baseCost + additionalCosts;
+    const servicesList = additionalServices
+      .map((service) => service.description)
+      .sort((a, b) => a.localeCompare(b))
+      .join(", ");
+
+    const customerId = booking.customer?.person_id ?? null;
+    const person = customerId ? personMap.get(customerId) : null;
+    const bankAccount = person?.bankAccount || {};
+
+    return {
+      booking_id: booking._id,
+      start_date: booking.start_date,
+      end_date: booking.end_date,
+      customer_id: customerId,
+      customer_name: booking.customer?.name ?? null,
+      customer_iban: bankAccount.iban ?? null,
+      customer_bic: bankAccount.bic ?? null,
+      vehicle_id: vehicle.vehicle_id ?? null,
+      model: vehicle.model ?? null,
+      producer: vehicle.producer ?? null,
+      retailer_id: booking.retailer?.person_id ?? null,
+      retailer_name: booking.retailer?.company_name ?? null,
+      rental_days: rentalDays,
+      cost_per_day: costPerDay,
+      base_cost: baseCost,
+      additional_costs: additionalCosts,
+      additional_services_count: additionalServices.length,
+      total_cost: totalCost,
+      additional_services_list: servicesList || null,
+    };
+  });
 }
 
 
@@ -279,6 +610,16 @@ app.post("/api/generate", async (req, res) => {
 });
 
 app.get("/api/usecase/customers", async (req, res) => {
+  if (isNoSqlMode()) {
+    try {
+      const customers = await getUseCaseCustomersNoSql();
+      res.json({ customers });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to load customers" });
+    }
+    return;
+  }
+
   try {
     const [rows] = await pool.query(
       `SELECT
@@ -307,6 +648,16 @@ app.get("/api/usecase/bookings", async (req, res) => {
   const customerId = req.query.customerId;
   if (!customerId) {
     res.status(400).json({ error: "Missing customerId" });
+    return;
+  }
+
+  if (isNoSqlMode()) {
+    try {
+      const bookings = await getUseCaseBookingsNoSql(customerId);
+      res.json({ bookings });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to load bookings" });
+    }
     return;
   }
 
@@ -368,6 +719,20 @@ app.get("/api/usecase/bookings", async (req, res) => {
 app.get("/api/usecase/bookings/:id/services", async (req, res) => {
   const bookingId = req.params.id;
 
+  if (isNoSqlMode()) {
+    try {
+      const result = await getUseCaseServicesNoSql(bookingId);
+      if (!result) {
+        res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to load services" });
+    }
+    return;
+  }
+
   try {
     const [available] = await pool.query(
       `SELECT
@@ -418,6 +783,28 @@ app.post("/api/usecase/bookings/:id/services", async (req, res) => {
 
   if (!confirmPayment) {
     res.status(400).json({ error: "Payment not confirmed" });
+    return;
+  }
+
+  if (isNoSqlMode()) {
+    try {
+      const result = await addUseCaseServicesNoSql(bookingId, {
+        customerId,
+        serviceIds,
+      });
+      if (result.error) {
+        res.status(result.status || 400).json({ error: result.error });
+        return;
+      }
+      res.json({
+        ok: true,
+        base_cost: result.baseCost,
+        extras_cost: result.extrasCost,
+        total_cost: result.totalCost,
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to add additional services" });
+    }
     return;
   }
 
@@ -506,6 +893,17 @@ app.post("/api/usecase/bookings/:id/services", async (req, res) => {
 
 
 app.get("/api/usecase2/report", async (req, res) => {
+  if (isNoSqlMode()) {
+    try {
+      const report = await getUseCase2ReportNoSql(req.query || {});
+      res.json({ report });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "database error" });
+    }
+    return;
+  }
+
   try {
     const { from, to, customerId, retailerId } = req.query;
     const filters = [];
@@ -768,7 +1166,8 @@ app.post("/api/usecase1/bookings", async (req, res) => {
 app.post("/api/migrate-nosql", async (req, res) => {
   try {
     await migrateToMongo();
-    res.json({ ok: true });
+    setDbMode("nosql");
+    res.json({ ok: true, mode: dbMode });
   } catch (err) {
     res.status(500).json({ error: "Migration failed" });
   }
