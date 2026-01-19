@@ -59,6 +59,8 @@ VALUES
   ('as4', 'FullInsurance', 50.00),
   ('as5', 'WinterTires', 25.00);
 
+  /*
+
 INSERT INTO Bookings_Services (booking_id, additional_service_id)
 VALUES
   ('b1', 'as1'),
@@ -70,6 +72,8 @@ VALUES
   ('b5', 'as1'),
   ('b5', 'as3');
 
+
+*/
 INSERT INTO Rating (rater_id, rated_id, stars)
 VALUES
   ('p_cust1', 'p_ret1', 4.8),
