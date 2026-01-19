@@ -19,6 +19,7 @@
           <button class="nav-button" data-view="usecase2" type="button">Use Case Student 2</button>
           <button class="nav-button" data-view="explore" type="button">Explore Data</button>
           <button class="nav-button" data-view="uc1-report" type="button">Analytics UC1</button>
+          <button class="nav-button" data-view="uc2-report" type="button">Analytics UC2</button>
 
         </nav>
         <div class="sidebar-footer">
@@ -292,6 +293,44 @@
             <div id="rep-out"></div>
           </div>
           
+        </section>
+
+        <section id="view-uc2-report" class="view">
+          <div class="card">
+            <h2>Analytics Use Case 2</h2>
+            <p class="subtitle">
+              Bookings with additional services, including customer, retailer, and bank account info.
+            </p>
+
+            <div class="form-row">
+              <label for="uc2-rep-from">From (start date)</label>
+              <input id="uc2-rep-from" type="date" />
+            </div>
+
+            <div class="form-row">
+              <label for="uc2-rep-to">To (start date, exclusive)</label>
+              <input id="uc2-rep-to" type="date" />
+            </div>
+
+            <div class="form-row">
+              <label for="uc2-rep-customer">Customer (optional customer_id)</label>
+              <input id="uc2-rep-customer" type="text" placeholder="e.g. p_cust1" />
+            </div>
+
+            <div class="form-row">
+              <label for="uc2-rep-retailer">Retailer (optional retailer_id)</label>
+              <input id="uc2-rep-retailer" type="text" placeholder="e.g. p_anb1" />
+            </div>
+
+            <div class="form-row">
+              <button id="uc2-rep-btn" class="card-button" type="button">
+                Show report
+              </button>
+            </div>
+
+            <p id="uc2-rep-status" class="status"></p>
+            <div id="uc2-rep-out"></div>
+          </div>
         </section>
       </main>
     </div>
