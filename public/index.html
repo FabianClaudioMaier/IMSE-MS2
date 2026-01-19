@@ -16,8 +16,7 @@
         <nav class="nav">
           <button class="nav-button active" data-view="home" type="button">Home</button>
           <button class="nav-button" data-view="usecase1" type="button" >Create new Reservation</button>
-          <button class="nav-button" data-view="usecase2" type="button">Use Case Student 2</button>
-          <button class="nav-button" data-view="explore" type="button">Explore Data</button>
+          <button class="nav-button" data-view="usecase2" type="button">Add additional Services</button>
           <button class="nav-button" data-view="uc1-report" type="button">Analytics UC1</button>
           <button class="nav-button" data-view="uc2-report" type="button">Analytics UC2</button>
 
@@ -27,7 +26,6 @@
         </div>
       </aside>
 
-      
       <main class="content">
         <section id="view-home" class="view active">
           <header class="hero">
@@ -55,7 +53,7 @@
               Create new Reservation
             </button>
             <button id="home-uc2" class="card-button accent" type="button">
-              Use Case Student 2
+              Add additional Services
             </button>
 
             <button id="generate" class="generate" type="button">Generate Data</button>
@@ -63,13 +61,6 @@
           </div>
         </section>
 
-
-
-
-
-
-
-        
         <section id="view-usecase1" class="view">
           <header class="hero">
             <div>
@@ -82,13 +73,11 @@
           <div class="card">
             <h2>Reservation</h2>
 
-
             <div class="form-row">
               <label for="uc1-customer">Customer</label>
               <select id="uc1-customer"></select>
             </div>
-      
-        
+    
             <div class="form-row">
               <label for="uc1-start">Start date</label>
               <input id="uc1-start" type="date" />
@@ -110,39 +99,12 @@
             <h2>Available vehicles</h2>
             <div id="uc1-vehicles"></div>
           </div>
-        
-
-          
-
-
-
         </section>
         
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         <section id="view-usecase2" class="view">
           <header class="view-header">
             <div>
-              <p class="tag">Use Case Student 2</p>
+              <p class="tag">Student 2</p>
               <h2>Book Additional Services</h2>
               <p class="subtitle">
                 Select a customer, pick an active booking, add extra services, and confirm payment.
@@ -201,68 +163,6 @@
           </div>
         </section>
 
-        <section id="view-explore" class="view">
-          <header class="view-header">
-            <div>
-              <p class="tag">Explore Data</p>
-              <h2>Fleet Data Console</h2>
-              <p class="subtitle">
-                Browse tables created in seed/Create_Tables.sql
-              </p>
-            </div>
-            <div class="hero-card">
-              <div class="metric">
-                <span class="metric-label">Tables</span>
-                <span id="table-count" class="metric-value">-</span>
-              </div>
-              <div class="metric">
-                <span class="metric-label">Rows</span>
-                <span id="row-count" class="metric-value">-</span>
-              </div>
-            </div>
-          </header>
-
-          <div class="explore-grid">
-            <section class="panel">
-              <h2>Tables</h2>
-              <div id="table-buttons" class="button-grid"></div>
-
-              <div class="controls">
-                <label for="limit">Row limit</label>
-                <input id="limit" type="number" min="1" max="500" value="50">
-
-                <label for="search">Filter</label>
-                <input id="search" type="text" placeholder="Type to filter rows">
-
-                <button id="refresh" class="accent" type="button">Refresh</button>
-
-
-                <p id="generate-hint" class="hint">
-                  One-time action. Inserts up to 10 rows per table.
-                </p>
-              </div>
-
-              <p id="status" class="status">Select a table to load data.</p>
-            </section>
-
-            <section class="panel wide">
-              <div class="table-header">
-                <h2 id="table-title">No table loaded</h2>
-                <p id="table-meta">Pick a table to see its rows.</p>
-              </div>
-
-              <div class="table-wrap">
-                <table id="data-table">
-                  <thead></thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        </section>
-
-
-
         <section id="view-uc1-report" class="view">
           <div class="card">
             <h2>Analytics Report</h2>
@@ -275,11 +175,6 @@
             <div class="form-row">
               <label for="rep-to">To</label>
               <input id="rep-to" type="date" />
-            </div>
-          
-            <div class="form-row">
-              <label for="rep-vehicle">Vehicle (optional vehicle_id)</label>
-              <input id="rep-vehicle" type="text" placeholder="e.g. v_123" />
             </div>
           
             <div class="form-row">
@@ -312,16 +207,6 @@
             </div>
 
             <div class="form-row">
-              <label for="uc2-rep-customer">Customer (optional customer_id)</label>
-              <input id="uc2-rep-customer" type="text" placeholder="e.g. p_cust1" />
-            </div>
-
-            <div class="form-row">
-              <label for="uc2-rep-retailer">Retailer (optional retailer_id)</label>
-              <input id="uc2-rep-retailer" type="text" placeholder="e.g. p_anb1" />
-            </div>
-
-            <div class="form-row">
               <button id="uc2-rep-btn" class="card-button" type="button">
                 Show report
               </button>
@@ -334,6 +219,6 @@
       </main>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="js/main.js"></script>
   </body>
 </html>
