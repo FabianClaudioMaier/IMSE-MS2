@@ -62,6 +62,7 @@ const generateButton = document.getElementById("generate");
 const generateHint = document.getElementById("generate-hint");
 const migrateButton = document.getElementById("migrate-nosql");
 const migrateHint = document.getElementById("migrate-hint");
+const homeMigrateStatus = document.getElementById("home-migrate-status");
 const statusEl = document.getElementById("status");
 const tableTitle = document.getElementById("table-title");
 const tableMeta = document.getElementById("table-meta");
@@ -82,6 +83,14 @@ function setStatus(message, isError = false) {
   }
   statusEl.textContent = message;
   statusEl.classList.toggle("error", isError);
+}
+
+function setMigrateStatus(message, isError = false) {
+  if (homeMigrateStatus) {
+    homeMigrateStatus.textContent = message;
+    homeMigrateStatus.classList.toggle("error", isError);
+  }
+  setStatus(message, isError);
 }
 
 function formatCell(value) {
@@ -202,6 +211,10 @@ async function loadTable(tableName) {
   }
 }
 
+
+
+
+
 async function loadTables() {
   if (!tableButtons) {
     return;
@@ -231,6 +244,10 @@ async function loadTables() {
     setStatus("Failed to load table list.", true);
   }
 }
+
+
+
+
 
 function setGenerateState({ disabled, label, hint }) {
   if (!generateButton || !generateHint) {
@@ -314,7 +331,7 @@ async function generateData() {
 async function migrateNoSql() {
   if (!migrateButton) return;
   migrateButton.disabled = true;
-  setStatus("Migrating to NoSQL...");
+  setMigrateStatus("Migrating to NoSQL...");
   try {
     const res = await fetch("/api/migrate-nosql", { method: "POST" });
     const data = await res.json();
@@ -330,7 +347,7 @@ async function migrateNoSql() {
     renderCustomerDetails();
     loadUseCaseCustomers();
   } catch (err) {
-    setStatus("Migration failed.", true);
+    setMigrateStatus("Migration failed.", true);
   } finally {
     migrateButton.disabled = false;
   }
@@ -387,18 +404,17 @@ if (searchInput) {
 let uc1CustomersLoaded = false;
 let uc1DefaultCustomerId = null;
 
-// Elemente holen (passen zu index.html)
 const customerSelect = document.getElementById("uc1-customer");
 const startInput = document.getElementById("uc1-start");
 const endInput = document.getElementById("uc1-end");
-const searchBtn = document.getElementById("uc1-search");
-const statusP = document.getElementById("uc1-status");
+const searchButton = document.getElementById("uc1-search");
+const statusParagraph = document.getElementById("uc1-status");
 const vehiclesDiv = document.getElementById("uc1-vehicles");
 const summaryDiv = document.getElementById("uc1-result");
 
 function setUc1Status(text) {
-  if (statusP) {
-    statusP.textContent = text || "";
+  if (statusParagraph) {
+    statusParagraph.textContent = text || "";
   }
 }
 
@@ -437,11 +453,14 @@ async function postJson(url, body) {
 //
 
 
-// 1) Customers laden
+// Customers laden
 async function loadUc1Customers() {
   try {
     setUc1Status("Loading customers...");
-    const data = await getJson("/api/usecase1/customers");
+
+
+
+    const data = await getJson("/api/nosql/usecase1/customers");
 
     if(data.customers && data.customers.length>0){
       uc1DefaultCustomerId= data.customers[0].person_id;
@@ -483,7 +502,7 @@ async function loadUc1Customers() {
 
 
 
-// 2) Fahrzeuge suchen
+// Fahrzeuge suchen
 async function searchVehicles(options = {}) {
 
 
@@ -544,7 +563,7 @@ async function searchVehicles(options = {}) {
       setUc1Status("Searching vehicles...");
     }
     const data = await getJson(
-      `/api/usecase1/vehicles?start=${start}&end=${end}`
+      `/api/nosql/usecase1/vehicles?start=${start}&end=${end}`
     );
 
     if (!preserveStatus) {
@@ -592,7 +611,7 @@ async function searchVehicles(options = {}) {
 
 
 
-// 3) Reservieren
+//Reservieren
 async function reserveVehicle(vehicleId, startDate, endDate, customerId) {
 
 
@@ -608,7 +627,7 @@ async function reserveVehicle(vehicleId, startDate, endDate, customerId) {
       wayOfBilling: "BANK_TRANSFER",
     };
 
-    const data = await postJson("/api/usecase1/bookings", daten);
+    const data = await postJson("/api/nosql/usecase1/bookings", daten);
 
     setUc1Status("Reservation created!");
     setSummary(data);
@@ -619,8 +638,8 @@ async function reserveVehicle(vehicleId, startDate, endDate, customerId) {
   }
 }
 
-if (searchBtn) {
-  searchBtn.addEventListener("click", searchVehicles);
+if (searchButton) {
+  searchButton.addEventListener("click", searchVehicles);
 }
 
 loadUc1Customers();
@@ -1091,7 +1110,7 @@ loadUc1Customers();
 
 
 
-// ===== Analytics Report (Use Case Student 1) =====
+// Analytics Report (Use Case Student 1) 
 
 const repFrom = document.getElementById("rep-from");
 const repTo = document.getElementById("rep-to");
@@ -1118,8 +1137,6 @@ function renderReport(rows) {
   }
 
   const table = document.createElement("table");
-  table.border = "1";
-  table.cellPadding = "6";
 
   table.innerHTML = `
     <thead>
@@ -1141,16 +1158,16 @@ function renderReport(rows) {
 
   for (const r of rows) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.booking_id}</td>
-      <td>${r.customer_name}</td>
-      <td>${r.producer} ${r.model}</td>
-      <td>${r.start_date} → ${r.end_date}</td>
-      <td>${r.days}</td>
-      <td>${r.base_cost}</td>
-      <td>${r.additional_cost}</td>
-      <td><b>${r.total_cost}</b></td>
-    `;
+    tr.innerHTML =
+    "<td>" + r.booking_id + "</td>" +
+    "<td>" + r.customer_name + "</td>" +
+    "<td>" + r.producer + " " + r.model + "</td>" +
+    "<td>" + r.start_date + " -> " + r.end_date + "</td>" +
+    "<td>" + r.days + "</td>" +
+    "<td>" + r.base_cost + "</td>" +
+    "<td>" + r.additional_cost + "</td>" +
+    "<td><b>" + r.total_cost + "</b></td>";
+  
     tbody.appendChild(tr);
   }
 
@@ -1162,6 +1179,9 @@ async function loadReport() {
   if (!repOut || !repFrom || !repTo || !repVehicle) {
     return;
   }
+
+
+
   try {
 
 
@@ -1180,7 +1200,7 @@ async function loadReport() {
     }
 
     const url =
-      "/api/usecase1/report" +
+      "/api/nosql/usecase1/report" +
       (params.toString() ? "?" + params.toString() : "");
 
     const res = await fetch(url);
