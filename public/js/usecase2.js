@@ -19,6 +19,7 @@ export function initUsecase2({ actions }) {
   const ucSummary = document.getElementById("uc-summary");
   const ucConfirmServices = document.getElementById("uc-confirm-services");
   const ucPaymentPanel = document.getElementById("uc-payment-panel");
+  const ucPaymentDetails = document.getElementById("uc-payment-details");
   const ucConfirmPayment = document.getElementById("uc-confirm-payment");
   const ucCancelPayment = document.getElementById("uc-cancel-payment");
   const ucStatus = document.getElementById("uc-status");
@@ -342,10 +343,23 @@ export function initUsecase2({ actions }) {
     }
   }
 
+  function renderPaymentDetails() {
+    if (!ucPaymentDetails) {
+      return;
+    }
+    if (!ucSelectedCustomer || !ucSelectedCustomer.iban) {
+      ucPaymentDetails.textContent = "No bank account on file.";
+      return;
+    }
+    const bic = ucSelectedCustomer.bic ? ` / ${ucSelectedCustomer.bic}` : "";
+    ucPaymentDetails.textContent = `Bank account: ${ucSelectedCustomer.iban}${bic}`;
+  }
+
   function showPaymentPanel() {
     if (ucPaymentPanel) {
       ucPaymentPanel.classList.remove("hidden");
     }
+    renderPaymentDetails();
   }
 
   async function confirmAdditionalServices() {
@@ -408,10 +422,11 @@ export function initUsecase2({ actions }) {
       ucSelectedCustomer =
         ucCustomers.find((customer) => customer.person_id === selectedId) ||
         null;
-      renderCustomerDetails();
-      clearUseCaseData();
-      loadBookingsForCustomer();
-    });
+    renderCustomerDetails();
+    renderPaymentDetails();
+    clearUseCaseData();
+    loadBookingsForCustomer();
+  });
   }
 
   if (ucConfirmServices) {
